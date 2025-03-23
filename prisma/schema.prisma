@@ -1,0 +1,34 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "sqlite"
+  url      = "file:./dev.db"
+}
+
+model Account {
+  id          Int      @id @default(autoincrement())
+  type        String   // 'instagram' or 'twitter'
+  age         String
+  followers   String
+  price       Float
+  credentials String   // Encrypted account credentials
+  isReserved  Boolean  @default(false)
+  reservedAt  DateTime?
+  reservedBy  String?
+  soldAt      DateTime?
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+}
+
+model Order {
+  id        Int      @id @default(autoincrement())
+  accountId Int
+  email     String
+  amount    Float
+  status    String   // 'pending', 'completed', 'failed'
+  paymentId String?
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+}
