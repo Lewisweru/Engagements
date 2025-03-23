@@ -17,7 +17,7 @@ interface Account {
 export default function MarketplacePage() {
   const [searchTerm, setSearchTerm] = useState('');
   const [selectedPlatform, setSelectedPlatform] = useState<string>('all');
-  const [priceRange, setPriceRange] = useState<[number, number]>([0, 1000]);
+  const [priceRange] = useState<[number, number]>([0, 1000]);
 
   const [accounts] = useState<Account[]>([
     {

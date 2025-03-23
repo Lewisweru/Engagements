@@ -35,16 +35,16 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   const [currentUser, setCurrentUser] = useState<User | null>(null);
   const [loading, setLoading] = useState(true);
 
-  async function signup(email: string, password: string) {
+  async function signup(email: string, password: string): Promise<void> {
     try {
-      const result = await createUserWithEmailAndPassword(auth, email, password);
-      toast.success('Account created successfully!');
-      return result;
+      await createUserWithEmailAndPassword(auth, email, password);
+      toast.success("Account created successfully!");
     } catch (error) {
-      toast.error('Failed to create account');
+      toast.error("Failed to create account");
       throw error;
     }
   }
+  
 
   async function login(email: string, password: string) {
     try {
