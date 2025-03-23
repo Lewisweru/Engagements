@@ -1,20 +1,21 @@
-import { createContext, useContext, useEffect, useState } from 'react';
-import { 
+import { createContext, useContext, useEffect, useState } from "react";
+import {
   User,
+  UserCredential,
   createUserWithEmailAndPassword,
   signInWithEmailAndPassword,
   signOut,
   onAuthStateChanged,
   sendPasswordResetEmail,
-  updateProfile
-} from 'firebase/auth';
-import { auth } from '@/lib/firebase';
-import { toast } from 'react-hot-toast';
+  updateProfile,
+} from "firebase/auth";
+import { auth } from "@/lib/firebase";
+import { toast } from "react-hot-toast";
 
 interface AuthContextType {
   currentUser: User | null;
   signup: (email: string, password: string) => Promise<void>;
-  login: (email: string, password: string) => Promise<void>;
+  login: (email: string, password: string) => Promise<UserCredential>; // ✅ Fixed return type
   logout: () => Promise<void>;
   resetPassword: (email: string) => Promise<void>;
   updateUserProfile: (displayName: string) => Promise<void>;
@@ -26,7 +27,7 @@ const AuthContext = createContext<AuthContextType | null>(null);
 export function useAuth() {
   const context = useContext(AuthContext);
   if (!context) {
-    throw new Error('useAuth must be used within an AuthProvider');
+    throw new Error("useAuth must be used within an AuthProvider");
   }
   return context;
 }
@@ -44,47 +45,46 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       throw error;
     }
   }
-  
 
-  async function login(email: string, password: string) {
+  async function login(email: string, password: string): Promise<UserCredential> {
     try {
       const result = await signInWithEmailAndPassword(auth, email, password);
-      toast.success('Logged in successfully!');
-      return result;
+      toast.success("Logged in successfully!");
+      return result; // ✅ Matches the correct return type
     } catch (error) {
-      toast.error('Failed to log in');
+      toast.error("Failed to log in");
       throw error;
     }
   }
 
-  async function logout() {
+  async function logout(): Promise<void> {
     try {
       await signOut(auth);
-      toast.success('Logged out successfully');
+      toast.success("Logged out successfully");
     } catch (error) {
-      toast.error('Failed to log out');
+      toast.error("Failed to log out");
       throw error;
     }
   }
 
-  async function resetPassword(email: string) {
+  async function resetPassword(email: string): Promise<void> {
     try {
       await sendPasswordResetEmail(auth, email);
-      toast.success('Password reset email sent!');
+      toast.success("Password reset email sent!");
     } catch (error) {
-      toast.error('Failed to send password reset email');
+      toast.error("Failed to send password reset email");
       throw error;
     }
   }
 
-  async function updateUserProfile(displayName: string) {
+  async function updateUserProfile(displayName: string): Promise<void> {
     try {
       if (auth.currentUser) {
         await updateProfile(auth.currentUser, { displayName });
-        toast.success('Profile updated successfully!');
+        toast.success("Profile updated successfully!");
       }
     } catch (error) {
-      toast.error('Failed to update profile');
+      toast.error("Failed to update profile");
       throw error;
     }
   }
@@ -105,12 +105,8 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     logout,
     resetPassword,
     updateUserProfile,
-    loading
+    loading,
   };
 
-  return (
-    <AuthContext.Provider value={value}>
-      {!loading && children}
-    </AuthContext.Provider>
-  );
+  return <AuthContext.Provider value={value}>{!loading && children}</AuthContext.Provider>;
 }
