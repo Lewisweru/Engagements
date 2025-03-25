@@ -1,9 +1,9 @@
-import { Link, useNavigate } from 'react-router-dom';
-import { Button } from './ui/button';
-import { useTheme } from './ThemeProvider';
-import { Sun, Moon, Menu, LogOut } from 'lucide-react';
-import { useState } from 'react';
-import { useAuth } from '@/contexts/AuthContext';
+import { Link, useNavigate } from "react-router-dom";
+import { Button } from "./ui/button";
+import { useTheme } from "./ThemeProvider";
+import { Sun, Moon, Menu, LogOut } from "lucide-react";
+import { useState } from "react";
+import { useAuth } from "@/contexts/AuthContext";
 
 export default function Navbar() {
   const { theme, setTheme } = useTheme();
@@ -14,26 +14,25 @@ export default function Navbar() {
   const handleLogout = async () => {
     try {
       await logout();
-      navigate('/');
+      navigate("/");
     } catch (error) {
-      console.error('Failed to log out:', error);
+      console.error("Failed to log out:", error);
     }
   };
 
   return (
-    <nav className="border-b">
-      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-        <div className="flex justify-between h-16">
-          <div className="flex">
-            <Link to="/" className="flex items-center">
-              <span className="text-2xl font-bold bg-gradient-to-r from-purple-600 to-blue-500 text-transparent bg-clip-text">
-                SocialMarket
-              </span>
-            </Link>
-          </div>
+    <nav className="w-full bg-gray-900 border-b border-gray-700 shadow-lg">
+      <div className="max-w-7xl mx-auto px-6 lg:px-8">
+        <div className="flex justify-between items-center h-16">
+          {/* Logo */}
+          <Link to="/" className="flex items-center">
+            <span className="text-2xl font-bold bg-gradient-to-r from-purple-600 to-blue-500 text-transparent bg-clip-text">
+              SocialMarket
+            </span>
+          </Link>
 
           {/* Desktop Navigation */}
-          <div className="hidden md:flex md:items-center md:space-x-4">
+          <div className="hidden md:flex md:items-center md:space-x-6">
             <Link to="/marketplace">
               <Button variant="ghost">Marketplace</Button>
             </Link>
@@ -45,13 +44,26 @@ export default function Navbar() {
                 <Button variant="ghost">Dashboard</Button>
               </Link>
             )}
+
+            {/* Sell an Account Button */}
+            {currentUser && (
+              <Link to="/create-listing">
+                <Button variant="default" className="bg-green-500 hover:bg-green-600">
+                  Sell an Account
+                </Button>
+              </Link>
+            )}
+
+            {/* Dark Mode Toggle */}
             <Button
               variant="ghost"
               size="icon"
-              onClick={() => setTheme(theme === 'dark' ? 'light' : 'dark')}
+              onClick={() => setTheme(theme === "dark" ? "light" : "dark")}
             >
-              {theme === 'dark' ? <Sun className="h-5 w-5" /> : <Moon className="h-5 w-5" />}
+              {theme === "dark" ? <Sun className="h-5 w-5" /> : <Moon className="h-5 w-5" />}
             </Button>
+
+            {/* User Auth Actions */}
             {currentUser ? (
               <div className="flex items-center space-x-4">
                 <span className="text-sm">{currentUser.email}</span>
@@ -68,11 +80,7 @@ export default function Navbar() {
 
           {/* Mobile menu button */}
           <div className="md:hidden flex items-center">
-            <Button
-              variant="ghost"
-              size="icon"
-              onClick={() => setIsMenuOpen(!isMenuOpen)}
-            >
+            <Button variant="ghost" size="icon" onClick={() => setIsMenuOpen(!isMenuOpen)}>
               <Menu className="h-5 w-5" />
             </Button>
           </div>
@@ -81,40 +89,36 @@ export default function Navbar() {
 
       {/* Mobile Navigation */}
       {isMenuOpen && (
-        <div className="md:hidden">
-          <div className="px-2 pt-2 pb-3 space-y-1">
-            <Link
-              to="/marketplace"
-              className="block px-3 py-2 rounded-md text-base font-medium hover:bg-accent"
-            >
+        <div className="md:hidden bg-gray-800 border-t border-gray-700">
+          <div className="px-4 py-2 space-y-2">
+            <Link to="/marketplace" className="block text-white py-2 hover:bg-gray-700 px-3 rounded">
               Marketplace
             </Link>
-            <Link
-              to="/engagement"
-              className="block px-3 py-2 rounded-md text-base font-medium hover:bg-accent"
-            >
+            <Link to="/engagement" className="block text-white py-2 hover:bg-gray-700 px-3 rounded">
               Engagement
             </Link>
             {currentUser && (
-              <Link
-                to="/dashboard"
-                className="block px-3 py-2 rounded-md text-base font-medium hover:bg-accent"
-              >
+              <Link to="/dashboard" className="block text-white py-2 hover:bg-gray-700 px-3 rounded">
                 Dashboard
+              </Link>
+            )}
+            {currentUser && (
+              <Link
+                to="/create-listing"
+                className="block text-center py-2 bg-green-500 text-white rounded hover:bg-green-600"
+              >
+                Sell an Account
               </Link>
             )}
             {currentUser ? (
               <button
                 onClick={handleLogout}
-                className="w-full text-left px-3 py-2 rounded-md text-base font-medium hover:bg-accent"
+                className="w-full text-left py-2 px-3 text-white hover:bg-gray-700 rounded"
               >
                 Sign Out
               </button>
             ) : (
-              <Link
-                to="/auth"
-                className="block px-3 py-2 rounded-md text-base font-medium hover:bg-accent"
-              >
+              <Link to="/auth" className="block py-2 px-3 text-white hover:bg-gray-700 rounded">
                 Sign In
               </Link>
             )}

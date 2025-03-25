@@ -1,10 +1,14 @@
-import express from 'express';
-import cors from 'cors';
-import { PrismaClient } from '@prisma/client';
-import { createServer } from 'http';
-import { Server } from 'socket.io';
-import accountRoutes from './routes/accounts.js';
-import orderRoutes from './routes/orders.js';
+import express from "express";
+import cors from "cors";
+import mongoose from "mongoose";
+import dotenv from "dotenv";
+import { createServer } from "http";
+import { Server } from "socket.io";
+import accountRoutes from "./routes/Account.js";
+import orderRoutes from "./routes/Order.js";
+import listingRoutes from "./routes/listings.js";
+
+dotenv.config();
 
 const app = express();
 const httpServer = createServer(app);
@@ -15,61 +19,34 @@ const io = new Server(httpServer, {
   }
 });
 
-const prisma = new PrismaClient();
-
+// ✅ Middleware (Must Come BEFORE Routes)
 app.use(cors());
-app.use(express.json());
+app.use(express.json()); // ✅ Ensures JSON is parsed correctly
+app.use(express.urlencoded({ extended: true })); // ✅ Ensures form data is parsed
 
-app.use('/api/accounts', accountRoutes);
-app.use('/api/orders', orderRoutes);
-
-// Socket.IO for real-time cart updates
-io.on('connection', (socket) => {
-  console.log('Client connected');
-
-  socket.on('reserveAccount', async (accountId) => {
-    try {
-      const account = await prisma.account.update({
-        where: { id: accountId },
-        data: {
-          isReserved: true,
-          reservedAt: new Date(),
-          reservedBy: socket.id
-        }
-      });
-      
-      // Set timeout to release account after 10 minutes
-      setTimeout(async () => {
-        const currentAccount = await prisma.account.findUnique({
-          where: { id: accountId }
-        });
-        
-        if (currentAccount?.isReserved && !currentAccount?.soldAt) {
-          await prisma.account.update({
-            where: { id: accountId },
-            data: {
-              isReserved: false,
-              reservedAt: null,
-              reservedBy: null
-            }
-          });
-          io.emit('accountReleased', accountId);
-        }
-      }, 600000); // 10 minutes
-
-      socket.emit('accountReserved', account);
-      socket.broadcast.emit('accountUnavailable', accountId);
-    } catch (error) {
-      socket.emit('error', 'Failed to reserve account');
-    }
-  });
-
-  socket.on('disconnect', () => {
-    console.log('Client disconnected');
-  });
+// ✅ Debugging: Log incoming requests
+app.use((req, res, next) => {
+  console.log(`📡 ${req.method} Request to ${req.url}`, req.body);
+  next();
 });
 
+// ✅ MongoDB Connection
+mongoose.connect(process.env.MONGODB_URI, {
+  useNewUrlParser: true,
+  useUnifiedTopology: true
+}).then(() => {
+  console.log("✅ Connected to MongoDB Atlas!");
+}).catch((error) => {
+  console.error("❌ MongoDB Connection Failed:", error);
+});
+
+// ✅ API Routes
+app.use("/api/accounts", accountRoutes);
+app.use("/api/orders", orderRoutes);
+app.use("/api/listings", listingRoutes);
+
+// ✅ Start the Server
 const PORT = process.env.PORT || 3000;
 httpServer.listen(PORT, () => {
-  console.log(`Server running on port ${PORT}`);
+  console.log(`🚀 Server running on port ${PORT}`);
 });
