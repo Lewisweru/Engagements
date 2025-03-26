@@ -35,19 +35,19 @@ export default function DashboardPage() {
     const fetchDashboardData = async () => {
       try {
         // ✅ Fetch MongoDB user ID using Firebase UID
-        const userRes = await fetch(`http://localhost:3000/api/users/${currentUser.uid}`);
+        const userRes = await fetch(`${import.meta.env.VITE_BACKEND_URL}/api/users/${currentUser.uid}`);
         const userData = await userRes.json();
         if (!userRes.ok) throw new Error("User not found");
   
         const sellerId = userData._id; // ✅ Get MongoDB User ID
   
         // ✅ Fetch Listings (Filter by sellerId)
-        const listingsRes = await fetch(`http://localhost:3000/api/listings?sellerId=${sellerId}`);
+        const listingsRes = await fetch(`${import.meta.env.VITE_BACKEND_URL}/api/listings?sellerId=${sellerId}`);
         const listingsData = await listingsRes.json();
         setListings(listingsData);
   
         // ✅ Fetch Orders (Filter by sellerId)
-        const ordersRes = await fetch(`http://localhost:3000/api/orders?sellerId=${sellerId}`);
+        const ordersRes = await fetch(`${import.meta.env.VITE_BACKEND_URL}/api/orders?sellerId=${sellerId}`);
         const ordersData = await ordersRes.json();
   
         setStats({

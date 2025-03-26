@@ -42,7 +42,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       const user = userCredential.user;
   
       // ✅ Send user data to MongoDB
-      await fetch("http://localhost:3000/api/users", {
+      await fetch(`${import.meta.env.VITE_BACKEND_URL}/api/users`, {  
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ firebaseUid: user.uid, email: user.email }),

@@ -37,7 +37,7 @@ export default function CreateListing() {
     const fetchUserId = async () => {
       if (currentUser) {
         try {
-          const res = await fetch(`http://localhost:3000/api/users/${currentUser.uid}`);
+          const res = await fetch(`${import.meta.env.VITE_BACKEND_URL}/api/users/${currentUser.uid}`);
           const data = await res.json();
           if (res.ok) {
             setMongoUserId(data._id);
@@ -83,7 +83,8 @@ export default function CreateListing() {
     }
 
     setLoading(true);
-    const res = await fetch("http://localhost:3000/api/listings", {
+    const res = await fetch(`${import.meta.env.VITE_BACKEND_URL}/api/listings`,
+      {
       method: "POST",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({
