@@ -1,10 +1,11 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { motion } from "framer-motion";
 import { Instagram, Youtube, Facebook, Twitter, TrendingUp, PlusCircle } from "lucide-react";
 import { toast } from "react-hot-toast";
 import { useAuth } from "@/contexts/AuthContext";
 import { Button } from "@/components/ui/button";
 
+// ✅ Available Platforms
 const platforms = [
   { id: "instagram", name: "Instagram", icon: <Instagram className="h-6 w-6" />, color: "bg-pink-500" },
   { id: "youtube", name: "YouTube", icon: <Youtube className="h-6 w-6" />, color: "bg-red-500" },
@@ -13,12 +14,16 @@ const platforms = [
   { id: "tiktok", name: "TikTok", icon: <TrendingUp className="h-6 w-6" />, color: "bg-black" },
 ];
 
+// ✅ Available Niches
 const niches = ["Fashion", "Tech", "Fitness", "Gaming", "Business", "Lifestyle"];
 
 export default function CreateListing() {
   const { currentUser } = useAuth();
+  const [mongoUserId, setMongoUserId] = useState<string | null>(null);
   const [selectedPlatform, setSelectedPlatform] = useState<string | null>(null);
   const [step, setStep] = useState(0); // Track progress
+  const [loading, setLoading] = useState(false);
+  const [fetchingUser, setFetchingUser] = useState(true);
   const [formData, setFormData] = useState({
     username: "",
     followers: "",
@@ -27,30 +32,62 @@ export default function CreateListing() {
     description: "",
   });
 
+  // ✅ Fetch MongoDB User ID
+  useEffect(() => {
+    const fetchUserId = async () => {
+      if (currentUser) {
+        try {
+          const res = await fetch(`http://localhost:3000/api/users/${currentUser.uid}`);
+          const data = await res.json();
+          if (res.ok) {
+            setMongoUserId(data._id);
+          } else {
+            toast.error("Failed to fetch user data.");
+          }
+        } catch (error) {
+          toast.error("Error fetching user data.");
+        } finally {
+          setFetchingUser(false);
+        }
+      }
+    };
+    fetchUserId();
+  }, [currentUser]);
+
+  // ✅ Platform Selection
   const handleSelectPlatform = (platform: string) => {
     setSelectedPlatform(platform);
-    setStep(1); // Move to the next step
+    setStep(1);
   };
 
+  // ✅ Handle Input Changes
   const handleChange = (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>) => {
     setFormData({ ...formData, [e.target.name]: e.target.value });
   };
 
+  // ✅ Handle Listing Submission
   const handleSubmit = async () => {
-    if (!currentUser) {
-      toast.error("You must be logged in to list an account.");
+    if (fetchingUser) {
+      toast.error("Fetching user data, please wait...");
       return;
     }
+
+    if (!mongoUserId) {
+      toast.error("User data not found. Please try again.");
+      return;
+    }
+
     if (!selectedPlatform || !formData.username || !formData.followers || !formData.niche || !formData.price) {
       toast.error("Please fill out all required fields.");
       return;
     }
 
+    setLoading(true);
     const res = await fetch("http://localhost:3000/api/listings", {
       method: "POST",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({
-        sellerId: currentUser.uid,
+        sellerId: mongoUserId, // ✅ Use MongoDB _id
         platform: selectedPlatform,
         username: formData.username,
         followers: parseInt(formData.followers),
@@ -61,8 +98,13 @@ export default function CreateListing() {
     });
 
     const data = await res.json();
+    setLoading(false);
+
     if (res.ok) {
       toast.success("Listing created successfully!");
+      setStep(0); // Reset form after success
+      setSelectedPlatform(null);
+      setFormData({ username: "", followers: "", niche: "", price: "", description: "" });
     } else {
       toast.error(data.error || "Failed to create listing.");
     }
@@ -72,7 +114,7 @@ export default function CreateListing() {
     <div className="max-w-4xl mx-auto py-10 px-6">
       <h1 className="text-3xl font-bold text-center mb-6">Sell Your Social Media Account</h1>
 
-      {/* Step 1: Select Platform */}
+      {/* ✅ Step 1: Select Platform */}
       {step === 0 && (
         <motion.div className="grid grid-cols-2 md:grid-cols-5 gap-4">
           {platforms.map((platform) => (
@@ -92,7 +134,7 @@ export default function CreateListing() {
         </motion.div>
       )}
 
-      {/* Step 2: Username */}
+      {/* ✅ Step-by-step form */}
       {step >= 1 && (
         <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} className="mt-6">
           <label className="block">Username:</label>
@@ -101,18 +143,14 @@ export default function CreateListing() {
         </motion.div>
       )}
 
-      {/* Step 3: Followers/Subscribers */}
       {step >= 2 && (
         <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} className="mt-6">
-          <label className="block">
-            {selectedPlatform === "youtube" ? "Subscribers" : "Followers"}:
-          </label>
+          <label className="block">{selectedPlatform === "youtube" ? "Subscribers" : "Followers"}:</label>
           <input name="followers" type="number" className="w-full p-2 border rounded" onChange={handleChange} />
           <Button className="mt-3" onClick={() => setStep(3)}>Next</Button>
         </motion.div>
       )}
 
-      {/* Step 4: Select Niche */}
       {step >= 3 && (
         <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} className="mt-6">
           <label className="block">Select Niche:</label>
@@ -128,7 +166,6 @@ export default function CreateListing() {
         </motion.div>
       )}
 
-      {/* Step 5: Price */}
       {step >= 4 && (
         <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} className="mt-6">
           <label className="block">Price (Ksh):</label>
@@ -137,12 +174,11 @@ export default function CreateListing() {
         </motion.div>
       )}
 
-      {/* Step 6: Submit Button */}
       {step >= 5 && (
         <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} className="mt-6">
-          <Button className="w-full bg-green-500 hover:bg-green-600" onClick={handleSubmit}>
+          <Button className="w-full bg-green-500 hover:bg-green-600" onClick={handleSubmit} disabled={loading}>
             <PlusCircle className="h-5 w-5 mr-2" />
-            Submit Listing
+            {loading ? "Submitting..." : "Submit Listing"}
           </Button>
         </motion.div>
       )}

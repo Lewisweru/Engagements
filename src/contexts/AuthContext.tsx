@@ -38,21 +38,15 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
 
   async function signup(email: string, password: string): Promise<void> {
     try {
-      // ✅ Create user in Firebase
       const userCredential = await createUserWithEmailAndPassword(auth, email, password);
       const user = userCredential.user;
   
-      // ✅ Save user in MongoDB
-      const res = await fetch("http://localhost:3000/api/auth/signup", {
+      // ✅ Send user data to MongoDB
+      await fetch("http://localhost:3000/api/users", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          uid: user.uid, // ✅ Use Firebase UID
-          email: user.email
-        }),
+        body: JSON.stringify({ firebaseUid: user.uid, email: user.email }),
       });
-  
-      if (!res.ok) throw new Error("Failed to save user in database");
   
       toast.success("Account created successfully!");
     } catch (error) {
