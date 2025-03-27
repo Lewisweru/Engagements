@@ -1,7 +1,7 @@
 import { motion } from 'framer-motion';
 import { Button } from '@/components/ui/button';
 import { Link } from 'react-router-dom';
-import { Instagram, Twitter, Youtube, TrendingUp, Shield, Clock, Facebook, Linkedin } from 'lucide-react';
+import { Instagram, Twitter, Youtube, Facebook, Linkedin } from 'lucide-react';
 
 export default function HomePage() {
   return (
