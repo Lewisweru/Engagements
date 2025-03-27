@@ -27,12 +27,14 @@ export default function HomePage() {
               Buy and sell social media accounts, followers, and engagement services
               with confidence.
             </motion.p>
+            {/* Buttons */}
             <motion.div
               initial={{ opacity: 0, y: 20 }}
               animate={{ opacity: 1, y: 0 }}
               transition={{ duration: 0.5, delay: 0.4 }}
-              className="flex justify-center gap-4"
+              className="flex justify-center gap-4 flex-wrap"
             >
+              {/* Browse Marketplace */}
               <Link to="/marketplace">
                 <motion.div
                   animate={{ scale: [1, 1.1, 1] }}
@@ -43,29 +45,31 @@ export default function HomePage() {
                   </Button>
                 </motion.div>
               </Link>
-              <div className="flex justify-center my-12">
-                  <motion.div
-                    whileHover={{ scale: 1.1 }}
-                    animate={{
-                      scale: [1, 1.1, 1],
-                      boxShadow: [
-                        '0px 0px 10px rgba(255, 0, 255, 0.6)',
-                        '0px 0px 15px rgba(0, 255, 255, 0.8)',
-                        '0px 0px 10px rgba(255, 0, 255, 0.6)',
-                      ],
-                      transition: { repeat: Infinity, duration: 1.5 },
-                    }}
+
+              {/* Buy Followers & Likes */}
+              <Link to="/engagement">
+                <motion.div
+                  whileHover={{ scale: 1.1 }}
+                  animate={{
+                    scale: [1, 1.1, 1],
+                    boxShadow: [
+                      '0px 0px 10px rgba(255, 0, 255, 0.6)',
+                      '0px 0px 15px rgba(0, 255, 255, 0.8)',
+                      '0px 0px 10px rgba(255, 0, 255, 0.6)',
+                    ],
+                    transition: { repeat: Infinity, duration: 1.5 },
+                  }}
+                >
+                  <Button
+                    size="lg"
+                    className="px-8 py-4 text-lg font-bold text-white rounded-full bg-gradient-to-r from-purple-500 to-blue-500"
                   >
-                    <Link to="/engagement">
-                      <Button
-                        size="lg"
-                        className="px-8 py-4 text-lg font-bold text-white rounded-full bg-gradient-to-r from-purple-500 to-blue-500"
-                      >
-                        Buy Followers & Likes 🚀
-                      </Button>
-                    </Link>
-                  </motion.div>
-                </div>
+                    Buy Followers & Likes 🚀
+                  </Button>
+                </motion.div>
+              </Link>
+
+              {/* Start Selling */}
               <Link to="/auth">
                 <motion.div
                   animate={{ scale: [1, 1.1, 1] }}
@@ -136,8 +140,6 @@ export default function HomePage() {
           </div>
         </div>
       </section>
-
-      {/* Buy Engagements Button */}
     </div>
   );
 }
