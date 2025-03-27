@@ -31,23 +31,40 @@ export default function AuthPage() {
   }
 
   return (
-    <div className="min-h-screen flex items-center justify-center px-4">
+    <div className="min-h-screen flex items-center justify-center bg-[#0f0f0f]">
       <motion.div
         initial={{ opacity: 0, y: 20 }}
         animate={{ opacity: 1, y: 0 }}
-        className="max-w-md w-full space-y-8 bg-card p-8 rounded-lg shadow-lg"
+        className="relative w-full max-w-md p-8 rounded-3xl bg-opacity-10 backdrop-blur-xl bg-white/10 border border-white/20 shadow-2xl"
       >
+        {/* Floating Neon Rings */}
+        <div className="absolute -top-12 left-1/2 transform -translate-x-1/2 w-24 h-24 bg-gradient-to-r from-blue-500 to-purple-500 rounded-full blur-2xl opacity-50 animate-pulse"></div>
+
         <div className="text-center">
-          <h2 className="text-3xl font-bold">{isLogin ? 'Welcome Back' : 'Create Account'}</h2>
-          <p className="mt-2 text-muted-foreground">
-            {isLogin ? 'Sign in to your account' : 'Sign up for a new account'}
+          <motion.h2
+            initial={{ opacity: 0, scale: 0.9 }}
+            animate={{ opacity: 1, scale: 1 }}
+            transition={{ duration: 0.5 }}
+            className="text-3xl font-extrabold text-white tracking-wide"
+          >
+            {isLogin ? 'Welcome Back' : 'Join the Future'}
+          </motion.h2>
+          <p className="mt-2 text-gray-300 text-sm">
+            {isLogin ? 'Sign in to your account' : 'Create a new futuristic account'}
           </p>
         </div>
 
-        <form onSubmit={handleSubmit} className="space-y-6">
-          <div>
-            <label htmlFor="email" className="block text-sm font-medium">
-              Email address
+        {/* Form */}
+        <form onSubmit={handleSubmit} className="mt-6 space-y-6">
+          {/* Email Field */}
+          <motion.div
+            initial={{ opacity: 0, y: 20 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ delay: 0.2 }}
+            className="relative"
+          >
+            <label htmlFor="email" className="text-gray-300 text-sm absolute top-2 left-3">
+              Email
             </label>
             <input
               id="email"
@@ -55,13 +72,19 @@ export default function AuthPage() {
               required
               value={email}
               onChange={(e) => setEmail(e.target.value)}
-              className="mt-1 block w-full rounded-md border border-input bg-background px-3 py-2"
+              className="w-full px-4 pt-6 pb-2 bg-transparent border border-gray-500 rounded-lg text-white placeholder-gray-500 focus:outline-none focus:ring-2 focus:ring-blue-500 transition"
               placeholder="Enter your email"
             />
-          </div>
+          </motion.div>
 
-          <div>
-            <label htmlFor="password" className="block text-sm font-medium">
+          {/* Password Field */}
+          <motion.div
+            initial={{ opacity: 0, y: 20 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ delay: 0.3 }}
+            className="relative"
+          >
+            <label htmlFor="password" className="text-gray-300 text-sm absolute top-2 left-3">
               Password
             </label>
             <input
@@ -70,27 +93,37 @@ export default function AuthPage() {
               required
               value={password}
               onChange={(e) => setPassword(e.target.value)}
-              className="mt-1 block w-full rounded-md border border-input bg-background px-3 py-2"
+              className="w-full px-4 pt-6 pb-2 bg-transparent border border-gray-500 rounded-lg text-white placeholder-gray-500 focus:outline-none focus:ring-2 focus:ring-purple-500 transition"
               placeholder="Enter your password"
             />
-          </div>
+          </motion.div>
 
-          <Button
-            type="submit"
-            className="w-full bg-gradient-to-r from-purple-600 to-blue-500"
-            disabled={loading}
+          {/* Submit Button */}
+          <motion.div
+            whileHover={{ scale: 1.05 }}
+            whileTap={{ scale: 0.95 }}
+            transition={{ duration: 0.2 }}
           >
-            {loading ? 'Processing...' : isLogin ? 'Sign In' : 'Sign Up'}
-          </Button>
+            <Button
+              type="submit"
+              className="w-full py-3 bg-gradient-to-r from-blue-500 to-purple-500 text-white font-bold rounded-lg shadow-md hover:shadow-blue-500/50 transition duration-300"
+              disabled={loading}
+            >
+              {loading ? 'Processing...' : isLogin ? 'Sign In' : 'Sign Up'}
+            </Button>
+          </motion.div>
         </form>
 
-        <div className="text-center">
-          <button
+        {/* Toggle Login/Signup */}
+        <div className="mt-6 text-center">
+          <motion.button
+            whileHover={{ scale: 1.1 }}
+            whileTap={{ scale: 0.95 }}
+            className="text-sm text-blue-400 hover:text-blue-300 transition"
             onClick={() => setIsLogin(!isLogin)}
-            className="text-sm text-primary hover:underline"
           >
             {isLogin ? "Don't have an account? Sign up" : 'Already have an account? Sign in'}
-          </button>
+          </motion.button>
         </div>
       </motion.div>
     </div>
