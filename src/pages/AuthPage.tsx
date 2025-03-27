@@ -31,15 +31,37 @@ export default function AuthPage() {
   }
 
   return (
-    <div className="min-h-screen flex items-center justify-center bg-[#0f0f0f]">
+    <div className="relative min-h-screen flex items-center justify-center overflow-hidden bg-black">
+      {/* Animated Falling Icons */}
+      <div className="absolute inset-0 pointer-events-none">
+        {Array.from({ length: 30 }).map((_, i) => (
+          <motion.div
+            key={i}
+            initial={{ opacity: 0, y: -50 }}
+            animate={{ opacity: 1, y: '100vh' }}
+            transition={{
+              duration: Math.random() * 4 + 3,
+              repeat: Infinity,
+              delay: Math.random() * 5,
+              ease: 'linear',
+            }}
+            className="absolute"
+            style={{
+              left: `${Math.random() * 100}vw`,
+              fontSize: `${Math.random() * 30 + 20}px`,
+            }}
+          >
+            {Math.random() > 0.5 ? '❤️' : '👍'}
+          </motion.div>
+        ))}
+      </div>
+
+      {/* Auth Card */}
       <motion.div
         initial={{ opacity: 0, y: 20 }}
         animate={{ opacity: 1, y: 0 }}
         className="relative w-full max-w-md p-8 rounded-3xl bg-opacity-10 backdrop-blur-xl bg-white/10 border border-white/20 shadow-2xl"
       >
-        {/* Floating Neon Rings */}
-        <div className="absolute -top-12 left-1/2 transform -translate-x-1/2 w-24 h-24 bg-gradient-to-r from-blue-500 to-purple-500 rounded-full blur-2xl opacity-50 animate-pulse"></div>
-
         <div className="text-center">
           <motion.h2
             initial={{ opacity: 0, scale: 0.9 }}
@@ -57,12 +79,7 @@ export default function AuthPage() {
         {/* Form */}
         <form onSubmit={handleSubmit} className="mt-6 space-y-6">
           {/* Email Field */}
-          <motion.div
-            initial={{ opacity: 0, y: 20 }}
-            animate={{ opacity: 1, y: 0 }}
-            transition={{ delay: 0.2 }}
-            className="relative"
-          >
+          <div className="relative">
             <label htmlFor="email" className="text-gray-300 text-sm absolute top-2 left-3">
               Email
             </label>
@@ -75,15 +92,10 @@ export default function AuthPage() {
               className="w-full px-4 pt-6 pb-2 bg-transparent border border-gray-500 rounded-lg text-white placeholder-gray-500 focus:outline-none focus:ring-2 focus:ring-blue-500 transition"
               placeholder="Enter your email"
             />
-          </motion.div>
+          </div>
 
           {/* Password Field */}
-          <motion.div
-            initial={{ opacity: 0, y: 20 }}
-            animate={{ opacity: 1, y: 0 }}
-            transition={{ delay: 0.3 }}
-            className="relative"
-          >
+          <div className="relative">
             <label htmlFor="password" className="text-gray-300 text-sm absolute top-2 left-3">
               Password
             </label>
@@ -96,7 +108,7 @@ export default function AuthPage() {
               className="w-full px-4 pt-6 pb-2 bg-transparent border border-gray-500 rounded-lg text-white placeholder-gray-500 focus:outline-none focus:ring-2 focus:ring-purple-500 transition"
               placeholder="Enter your password"
             />
-          </motion.div>
+          </div>
 
           {/* Submit Button */}
           <motion.div
