@@ -43,6 +43,15 @@ export default function HomePage() {
                   </Button>
                 </motion.div>
               </Link>
+              <Link to="/engagement">
+                <Button
+                  size="lg"
+                  className="px-8 py-4 text-lg font-bold text-white rounded-full bg-gradient-to-r from-purple-500 to-blue-500"
+                >
+                  Buy Followers & Likes 🚀
+                </Button>
+              </Link>
+
               <Link to="/auth">
                 <motion.div
                   animate={{ scale: [1, 1.1, 1] }}
@@ -97,7 +106,7 @@ export default function HomePage() {
           <div className="grid grid-cols-1 md:grid-cols-3 gap-8">
             {[
               { title: 'Secure Payments', description: 'Your transactions are protected.' },
-              { title: 'Real Followers', description: 'No bots, only genuine engagement.' },
+              { title: 'Grow your pages', description: 'Get clients easily .' },
               { title: '24/7 Support', description: 'Our team is here to help anytime.' },
             ].map((feature, index) => (
               <motion.div
@@ -128,14 +137,6 @@ export default function HomePage() {
             transition: { repeat: Infinity, duration: 1.5 },
           }}
         >
-          <Link to="/engagements">
-            <Button
-              size="lg"
-              className="px-8 py-4 text-lg font-bold text-white rounded-full bg-gradient-to-r from-purple-500 to-blue-500"
-            >
-              Buy Followers & Likes 🚀
-            </Button>
-          </Link>
         </motion.div>
       </div>
     </div>
