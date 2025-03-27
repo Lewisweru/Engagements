@@ -4,10 +4,12 @@ import { persist } from 'zustand/middleware';
 export interface CartItem {
   id: string;
   platform: string;
+  service: string;
   type: string;
   quantity: number;
   price: number;
   quality: string;
+  accountLink?: string; // Optional to avoid errors
 }
 
 interface CartStore {
@@ -25,10 +27,18 @@ export const useCartStore = create<CartStore>()(
       total: 0,
       addItem: (item) => {
         set((state) => {
-          const existingItem = state.items.find((i) => i.id === item.id);
+          // Ensure duplicates are not added
+          const existingItem = state.items.find(
+            (i) =>
+              i.platform === item.platform &&
+              i.service === item.service &&
+              i.accountLink === item.accountLink
+          );
+
           if (existingItem) {
-            return state;
+            return state; // Prevent duplicate exact items
           }
+
           const newTotal = state.total + item.price;
           return { items: [...state.items, item], total: newTotal };
         });

@@ -1,51 +1,139 @@
 import { useState } from "react";
 import { motion } from "framer-motion";
-import { Instagram, Twitter, Facebook, Youtube, TrendingUp } from "lucide-react";
+import { Instagram, Facebook, Youtube, TrendingUp, PlusCircle } from "lucide-react";
+// We'll replace Twitter with X icon text
+import { Twitter as XIcon } from "lucide-react"; 
 import { Button } from "@/components/ui/button";
 import { useCartStore } from "@/lib/store";
 import toast from "react-hot-toast";
 
-interface EngagementService {
-  id: string;
-  platform: string;
-  type: string;
-  delivery: string;
-  quality: "Standard" | "Premium" | "Ultra";
-}
+/** Base price in Ksh per unit */
+const BASE_PRICE_PER_UNIT = 0.50;
 
-const BASE_PRICE_PER_UNIT = 0.50; // Ksh 0.50 per 1 follower/like/view
+/** 
+ * Define your service options for each platform.
+ * The keys (tiktok, instagram, etc.) match the platform IDs used in `platforms`.
+ */
+const platformServices: Record<string, string[]> = {
+  tiktok: [
+    "Followers",
+    "Video Likes",
+    "Video Views",
+    "Video Saves",
+    "Video Shares",
+    "Custom Comments",
+    "Live Likes",
+  ],
+  instagram: [
+    "Followers",
+    "Likes",
+    "Views",
+    "Comments",
+  ],
+  facebook: [
+    "Page Likes",
+    "Post Likes",
+    "Post Shares",
+    "Comments",
+    "Followers",
+  ],
+  telegram: [
+    "Channel Members",
+    "Group Members",
+    "Post Views",
+  ],
+  x: [
+    "Followers",
+    "Likes",
+    "Retweets",
+    "Comments",
+  ],
+  youtube: [
+    "Subscribers",
+    "Likes",
+    "Views",
+    "Comments",
+  ],
+  whatsapp: [
+    "Group Joins",
+    "Status Views",
+  ],
+};
 
-const allServices: EngagementService[] = [
-  { id: "ig-followers", platform: "instagram", type: "followers", delivery: "10 -20 Minutes", quality: "Standard" },
-  { id: "ig-likes", platform: "instagram", type: "likes", delivery: "10 - 20 Minutes", quality: "Premium" },
-  { id: "ig-comments", platform: "instagram", type: "comments", delivery: "10 - 20 Minutes", quality: "Ultra" },
-  { id: "yt-views", platform: "youtube", type: "views", delivery: "10 - 20 Minutes", quality: "Premium" },
-  { id: "tt-followers", platform: "tiktok", type: "followers", delivery: "10 - 20 Minutes", quality: "Premium" },
-  { id: "tt-likes", platform: "tiktok", type: "likes", delivery: "10 - 20 Minutes", quality: "Standard" },
-];
+/**
+ * Define service types for more granular selection (quality or specific package).
+ * The key is lowercased + replaced spaces (e.g. 'Followers' => 'followers').
+ */
+const serviceTypes: Record<string, string[]> = {
+  followers: ["Average Quality", "High Quality"],
+  "video likes": ["Standard Likes", "Premium Likes"],
+  "video views": ["Standard Views", "High Retention Views"],
+  "video saves": ["Standard Saves"],
+  "video shares": ["Standard Shares"],
+  "custom comments": ["Custom Comments"],
+  "live likes": ["Live Likes"],
+  likes: ["Standard", "Premium"],
+  views: ["Standard", "High Retention"],
+  comments: ["Standard Comments", "Custom Comments"],
+  "page likes": ["Standard Page Likes", "Premium Page Likes"],
+  "post likes": ["Standard Post Likes", "Premium Post Likes"],
+  "post shares": ["Standard Shares"],
+  "channel members": ["Standard Members", "High Quality Members"],
+  "group members": ["Standard Members", "High Quality Members"],
+  "post views": ["Standard Views"],
+  retweets: ["Standard Retweets", "Premium Retweets"],
+  subscribers: ["Average Quality", "High Quality"],
+  "group joins": ["Standard", "Premium"],
+  "status views": ["Standard Views", "High Retention Views"],
+};
 
 export default function EngagementPage() {
-  const [selectedPlatform, setSelectedPlatform] = useState("instagram");
-  const [selectedType, setSelectedType] = useState("followers");
+  const [selectedPlatform, setSelectedPlatform] = useState("tiktok");
+  const [selectedService, setSelectedService] = useState("");
+  const [selectedType, setSelectedType] = useState("");
+  const [accountLink, setAccountLink] = useState("");
   const [quantity, setQuantity] = useState(1000);
+  
   const addToCart = useCartStore((state) => state.addItem);
+  const totalPrice = quantity * BASE_PRICE_PER_UNIT;
 
+  // Define the list of platforms with icons
   const platforms = [
-    { id: "instagram", name: "Instagram", icon: <Instagram className="h-5 w-5" />, color: "bg-pink-500" },
     { id: "tiktok", name: "TikTok", icon: <TrendingUp className="h-5 w-5" />, color: "bg-black" },
+    { id: "instagram", name: "Instagram", icon: <Instagram className="h-5 w-5" />, color: "bg-pink-500" },
     { id: "facebook", name: "Facebook", icon: <Facebook className="h-5 w-5" />, color: "bg-blue-600" },
+    { id: "telegram", name: "Telegram", icon: <TrendingUp className="h-5 w-5 rotate-45" />, color: "bg-blue-400" },
+    { id: "x", name: "X", icon: <XIcon className="h-5 w-5" />, color: "bg-gray-700" },
     { id: "youtube", name: "YouTube", icon: <Youtube className="h-5 w-5" />, color: "bg-red-600" },
-    { id: "twitter", name: "Twitter", icon: <Twitter className="h-5 w-5" />, color: "bg-blue-400" },
+    { id: "whatsapp", name: "WhatsApp", icon: <TrendingUp className="h-5 w-5 rotate-180" />, color: "bg-green-500" },
   ];
 
-  const selectedService = allServices.find((s) => s.platform === selectedPlatform && s.type === selectedType);
-  const totalPrice = quantity * BASE_PRICE_PER_UNIT; // ✅ Calculate price dynamically
-
   const handleAddToCart = () => {
-    if (!selectedService) return;
-    addToCart({ ...selectedService, quantity, price: totalPrice });
+    if (!selectedService || !accountLink) {
+      toast.error("Please fill all required fields.");
+      return;
+    }
+    // Add item to cart
+    addToCart({
+      platform: selectedPlatform,
+      service: selectedService,
+      quality: selectedType,
+      accountLink,
+      quantity,
+      price: totalPrice,
+      id: "",
+      type: ""
+    });
     toast.success("Added to cart!");
   };
+
+  // Get the list of services for the currently selected platform
+  const currentPlatformServices = platformServices[selectedPlatform] || [];
+
+  // If user selected a service, see if we have a type list
+  // Convert the service to a key: lower + replace spaces
+  const serviceKey = selectedService.toLowerCase().replace(/\s+/g, " ");
+  const possibleTypes = serviceTypes[serviceKey] || [];
 
   return (
     <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
@@ -63,7 +151,13 @@ export default function EngagementPage() {
             <Button
               key={platform.id}
               variant={selectedPlatform === platform.id ? "default" : "outline"}
-              onClick={() => setSelectedPlatform(platform.id)}
+              onClick={() => {
+                setSelectedPlatform(platform.id);
+                // Reset other states
+                setSelectedService("");
+                setSelectedType("");
+                setAccountLink("");
+              }}
               className="flex items-center space-x-2"
             >
               <span className={`p-1 rounded-md ${platform.color}`}>{platform.icon}</span>
@@ -72,61 +166,86 @@ export default function EngagementPage() {
           ))}
         </div>
 
-        {/* Engagement Type Selection */}
-        <div className="flex justify-center space-x-4">
-          {allServices
-            .filter((s) => s.platform === selectedPlatform)
-            .map((service) => (
-              <Button
-                key={service.id}
-                variant={selectedType === service.type ? "default" : "outline"}
-                onClick={() => setSelectedType(service.type)}
-                className="flex items-center space-x-2"
-              >
-                <span className="capitalize">{service.type}</span>
-              </Button>
-            ))}
-        </div>
-
-        {/* Quantity Selection */}
-        <div className="flex flex-col items-center space-y-4">
-          <label className="text-lg font-medium">Choose Quantity</label>
-          <input
-            type="number"
-            value={quantity}
-            min={100}
-            step={100}
-            className="p-2 rounded-lg bg-gray-800 border border-gray-600 w-48 text-center"
-            onChange={(e) => setQuantity(Math.max(100, Number(e.target.value)))}
-          />
-          <p className="text-lg font-bold text-green-400">Total: Ksh {totalPrice.toFixed(2)}</p>
-        </div>
-
-        {/* Service Card */}
-        {selectedService && (
-          <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} whileHover={{ scale: 1.02 }} className="bg-gray-900 p-6 rounded-lg shadow-lg">
-            <div className="flex justify-between items-center">
-              <h3 className="text-xl font-semibold capitalize">
-                {quantity.toLocaleString()} {selectedType}
-              </h3>
-              <span className="text-2xl font-bold">Ksh {totalPrice.toFixed(2)}</span>
-            </div>
-            <p className="text-muted-foreground">{selectedService.delivery} Delivery</p>
-            <p className="text-muted-foreground">{selectedService.quality} Quality</p>
-            <Button className="w-full mt-4" size="lg" onClick={handleAddToCart}>
-              Add to Cart
-            </Button>
+        {/* Engagement Form - Only show if the platform has defined services */}
+        <div className="space-y-6">
+          {/* Service Selection */}
+          <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} className="w-full max-w-md mx-auto">
+            <label className="block mb-2 font-semibold">Select Service:</label>
+            <select
+              value={selectedService}
+              onChange={(e) => {
+                setSelectedService(e.target.value);
+                setSelectedType(""); // reset type
+                setAccountLink("");
+              }}
+              className="w-full p-2 border rounded-md bg-gray-800"
+            >
+              <option value="">-- Choose a Service --</option>
+              {currentPlatformServices.map((service) => (
+                <option key={service} value={service}>
+                  {service}
+                </option>
+              ))}
+            </select>
           </motion.div>
-        )}
 
-        {/* Trust Badges */}
-        <div className="mt-12 text-center">
-          <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
-            <div className="p-4 bg-card rounded-lg"><h4 className="font-semibold">Secure Payment</h4><p className="text-sm text-muted-foreground">SSL Protected</p></div>
-            <div className="p-4 bg-card rounded-lg"><h4 className="font-semibold">24/7 Support</h4><p className="text-sm text-muted-foreground">Always Available</p></div>
-            <div className="p-4 bg-card rounded-lg"><h4 className="font-semibold">Money Back</h4><p className="text-sm text-muted-foreground">30 Day Guarantee</p></div>
-            <div className="p-4 bg-card rounded-lg"><h4 className="font-semibold">Fast Delivery</h4><p className="text-sm text-muted-foreground">Quick Results</p></div>
-          </div>
+          {/* Type Selection (if available) */}
+          {selectedService && possibleTypes.length > 0 && (
+            <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} className="w-full max-w-md mx-auto">
+              <label className="block mb-2 font-semibold">Select Type:</label>
+              <select
+                value={selectedType}
+                onChange={(e) => {
+                  setSelectedType(e.target.value);
+                  setAccountLink("");
+                }}
+                className="w-full p-2 border rounded-md bg-gray-800"
+              >
+                <option value="">-- Choose a Type --</option>
+                {possibleTypes.map((type) => (
+                  <option key={type} value={type}>
+                    {type}
+                  </option>
+                ))}
+              </select>
+            </motion.div>
+          )}
+
+          {/* Account Link (only if service is selected) */}
+          {(selectedService && !possibleTypes.length) || selectedType ? (
+            <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} className="w-full max-w-md mx-auto">
+              <label className="block mb-2 font-semibold">
+                {selectedPlatform.charAt(0).toUpperCase() + selectedPlatform.slice(1)} Account Link:
+              </label>
+              <input
+                type="text"
+                value={accountLink}
+                onChange={(e) => setAccountLink(e.target.value)}
+                placeholder={`Enter your ${selectedPlatform} account/link`}
+                className="w-full p-2 border rounded-md bg-gray-800"
+              />
+            </motion.div>
+          ) : null}
+
+          {/* Quantity + Add to Cart */}
+          {accountLink && (
+            <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} className="w-full max-w-md mx-auto flex flex-col items-center space-y-4">
+              <label className="font-semibold">Choose Quantity</label>
+              <input
+                type="number"
+                value={quantity}
+                min={100}
+                step={100}
+                onChange={(e) => setQuantity(Math.max(100, Number(e.target.value)))}
+                className="p-2 border rounded-md bg-gray-800 w-full text-center"
+              />
+              <p className="text-lg font-bold text-green-400">Total: Ksh {totalPrice.toFixed(2)}</p>
+              <Button onClick={handleAddToCart} className="w-full bg-green-500 hover:bg-green-600">
+                <PlusCircle className="h-5 w-5 mr-2" />
+                Add to Cart
+              </Button>
+            </motion.div>
+          )}
         </div>
       </motion.div>
     </div>
