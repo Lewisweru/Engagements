@@ -4,6 +4,7 @@ import { useNavigate } from 'react-router-dom';
 import { Button } from '@/components/ui/button';
 import { motion } from 'framer-motion';
 import { FcGoogle } from 'react-icons/fc';
+import React from 'react';
 
 // Background Animation Component (Optimized to Prevent Re-renders)
 const BackgroundAnimation = React.memo(() => (

@@ -8,17 +8,21 @@ import {
   onAuthStateChanged,
   sendPasswordResetEmail,
   updateProfile,
+  GoogleAuthProvider,
+  signInWithPopup,
 } from "firebase/auth";
 import { auth } from "@/lib/firebase";
+import { FirebaseError } from "firebase/app";
 import { toast } from "react-hot-toast";
 
 interface AuthContextType {
   currentUser: User | null;
   signup: (email: string, password: string) => Promise<void>;
-  login: (email: string, password: string) => Promise<UserCredential>; // ✅ Fixed return type
+  login: (email: string, password: string) => Promise<UserCredential>;
   logout: () => Promise<void>;
   resetPassword: (email: string) => Promise<void>;
   updateUserProfile: (displayName: string) => Promise<void>;
+  googleSignIn: () => Promise<void>; // Added googleSignIn to the interface
   loading: boolean;
 }
 
@@ -40,27 +44,26 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     try {
       const userCredential = await createUserWithEmailAndPassword(auth, email, password);
       const user = userCredential.user;
-  
-      // ✅ Send user data to MongoDB
-      await fetch(`${import.meta.env.VITE_BACKEND_URL}/api/users`, {  
+
+      // Send user data to MongoDB
+      await fetch(`${import.meta.env.VITE_BACKEND_URL}/api/users`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ firebaseUid: user.uid, email: user.email }),
       });
-  
+
       toast.success("Account created successfully!");
     } catch (error) {
       toast.error("Failed to create account");
       throw error;
     }
   }
-  
 
   async function login(email: string, password: string): Promise<UserCredential> {
     try {
       const result = await signInWithEmailAndPassword(auth, email, password);
       toast.success("Logged in successfully!");
-      return result; // ✅ Matches the correct return type
+      return result;
     } catch (error) {
       toast.error("Failed to log in");
       throw error;
@@ -99,6 +102,34 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     }
   }
 
+
+
+  async function googleSignIn(): Promise<void> {
+    try {
+      const provider = new GoogleAuthProvider();
+      const result = await signInWithPopup(auth, provider);
+      const user = result.user;
+
+      // Send user data to MongoDB
+      await fetch(`${import.meta.env.VITE_BACKEND_URL}/api/users`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ firebaseUid: user.uid, email: user.email }),
+      });
+
+      toast.success("Logged in with Google successfully!");
+    } catch (error) {
+      if (error instanceof FirebaseError) {
+        console.error("Firebase Error:", error);
+        toast.error(error.message);
+      } else {
+        console.error("Unexpected Error:", error);
+        toast.error("Something went wrong!");
+      }
+    }
+  }
+
+
   useEffect(() => {
     const unsubscribe = onAuthStateChanged(auth, (user) => {
       setCurrentUser(user);
@@ -115,6 +146,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     logout,
     resetPassword,
     updateUserProfile,
+    googleSignIn, // Added googleSignIn to the context value
     loading,
   };
 
