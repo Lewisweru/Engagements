@@ -22,7 +22,7 @@ interface AuthContextType {
   logout: () => Promise<void>;
   resetPassword: (email: string) => Promise<void>;
   updateUserProfile: (displayName: string) => Promise<void>;
-  googleSignIn: () => Promise<void>; // Added googleSignIn to the interface
+  googleSignIn: () => Promise<void>;
   loading: boolean;
 }
 
@@ -52,6 +52,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         body: JSON.stringify({ firebaseUid: user.uid, email: user.email }),
       });
 
+      setCurrentUser(user); // Ensure UI updates
       toast.success("Account created successfully!");
     } catch (error) {
       toast.error("Failed to create account");
@@ -62,6 +63,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   async function login(email: string, password: string): Promise<UserCredential> {
     try {
       const result = await signInWithEmailAndPassword(auth, email, password);
+      setCurrentUser(result.user);
       toast.success("Logged in successfully!");
       return result;
     } catch (error) {
@@ -73,6 +75,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   async function logout(): Promise<void> {
     try {
       await signOut(auth);
+      setCurrentUser(null);
       toast.success("Logged out successfully");
     } catch (error) {
       toast.error("Failed to log out");
@@ -94,6 +97,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     try {
       if (auth.currentUser) {
         await updateProfile(auth.currentUser, { displayName });
+        setCurrentUser({ ...auth.currentUser, displayName });
         toast.success("Profile updated successfully!");
       }
     } catch (error) {
@@ -101,8 +105,6 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       throw error;
     }
   }
-
-
 
   async function googleSignIn(): Promise<void> {
     try {
@@ -117,6 +119,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         body: JSON.stringify({ firebaseUid: user.uid, email: user.email }),
       });
 
+      setCurrentUser(user);
       toast.success("Logged in with Google successfully!");
     } catch (error) {
       if (error instanceof FirebaseError) {
@@ -128,7 +131,6 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       }
     }
   }
-
 
   useEffect(() => {
     const unsubscribe = onAuthStateChanged(auth, (user) => {
@@ -146,7 +148,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     logout,
     resetPassword,
     updateUserProfile,
-    googleSignIn, // Added googleSignIn to the context value
+    googleSignIn,
     loading,
   };
 

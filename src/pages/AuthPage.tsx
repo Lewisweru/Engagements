@@ -16,7 +16,7 @@ const BackgroundAnimation = React.memo(() => (
         initial={{ opacity: 0, y: 0 }}
         animate={{
           opacity: [0, 1, 0],
-          y: [0, -300, -600], // Increased movement for better visibility
+          y: [0, -300, -600],
           x: [Math.random() * 200 - 100, Math.random() * 300 - 150],
         }}
         transition={{
@@ -40,13 +40,20 @@ export default function AuthPage() {
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [loading, setLoading] = useState(false);
-  const { signup, login, googleSignIn } = useAuth(); // Added Google Sign-In
+  const { signup, login, googleSignIn, resetPassword } = useAuth();
   const navigate = useNavigate();
+
+  // Loader animation
+  const Loader = () => <div className="loader mx-auto my-4"></div>;
 
   // Prevent Re-renders When Typing by Using useCallback
   const handleSubmit = useCallback(
     async (e: React.FormEvent) => {
       e.preventDefault();
+      if (password.length < 6) {
+        alert("Password must be at least 6 characters long");
+        return;
+      }
       setLoading(true);
       try {
         if (isLogin) {
@@ -66,10 +73,7 @@ export default function AuthPage() {
 
   return (
     <div className="relative min-h-screen flex items-center justify-center px-4 bg-black">
-      {/* Static Animated Background */}
       <BackgroundAnimation />
-
-      {/* Auth Card */}
       <motion.div
         initial={{ opacity: 0, y: 20 }}
         animate={{ opacity: 1, y: 0 }}
@@ -99,7 +103,6 @@ export default function AuthPage() {
               placeholder="Enter your email"
             />
           </div>
-
           <div>
             <label htmlFor="password" className="block text-sm font-medium text-gray-300">
               Password
@@ -114,34 +117,32 @@ export default function AuthPage() {
               placeholder="Enter your password"
             />
           </div>
-
-          {/* Forgot Password Link */}
           {isLogin && (
             <div className="text-right">
-              <button className="text-sm text-blue-400 hover:underline">Forgot Password?</button>
+              <button onClick={() => email && resetPassword(email)} className="text-sm text-blue-400 hover:underline">
+                Forgot Password?
+              </button>
             </div>
           )}
-
-          <Button
-            type="submit"
-            className="w-full bg-gradient-to-r from-purple-600 to-blue-500 hover:opacity-90"
-            disabled={loading}
-          >
-            {loading ? 'Processing...' : isLogin ? 'Sign In' : 'Sign Up'}
+          <Button type="submit" className="w-full bg-gradient-to-r from-purple-600 to-blue-500 hover:opacity-90" disabled={loading}>
+            {loading ? <Loader /> : isLogin ? 'Sign In' : 'Sign Up'}
           </Button>
         </form>
-
-        {/* Google Sign-In */}
         <div className="mt-4">
           <Button
-            onClick={googleSignIn}
+            onClick={async () => {
+              try {
+                await googleSignIn();
+                navigate('/dashboard');
+              } catch (error) {
+                console.error("Google Sign-In Error:", error);
+              }
+            }}
             className="w-full flex items-center justify-center gap-2 bg-white text-black hover:bg-gray-200 transition"
           >
             <FcGoogle size={20} /> Continue with Google
           </Button>
         </div>
-
-        {/* Toggle Sign Up/Login */}
         <div className="text-center mt-4">
           <button
             onClick={() => setIsLogin(!isLogin)}
