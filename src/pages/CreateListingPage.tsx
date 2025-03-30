@@ -139,7 +139,11 @@ export default function CreateListing() {
       {step >= 1 && (
         <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} className="mt-6">
           <label className="block">Username:</label>
-          <input name="username" className="w-full p-2 border rounded" onChange={handleChange} />
+          <input
+            name="username"
+            className="w-full p-2 border rounded bg-gray-800 text-white" // ✅ Added text color
+            onChange={handleChange}
+          />
           <Button className="mt-3" onClick={() => setStep(2)}>Next</Button>
         </motion.div>
       )}
@@ -147,7 +151,12 @@ export default function CreateListing() {
       {step >= 2 && (
         <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} className="mt-6">
           <label className="block">{selectedPlatform === "youtube" ? "Subscribers" : "Followers"}:</label>
-          <input name="followers" type="number" className="w-full p-2 border rounded" onChange={handleChange} />
+          <input
+            name="followers"
+            type="number"
+            className="w-full p-2 border rounded bg-gray-800 text-white" // ✅ Added text color
+            onChange={handleChange}
+          />
           <Button className="mt-3" onClick={() => setStep(3)}>Next</Button>
         </motion.div>
       )}
@@ -170,7 +179,12 @@ export default function CreateListing() {
       {step >= 4 && (
         <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} className="mt-6">
           <label className="block">Price (Ksh):</label>
-          <input name="price" type="number" className="w-full p-2 border rounded" onChange={handleChange} />
+          <input
+            name="price"
+            type="number"
+            className="w-full p-2 border rounded bg-gray-800 text-white" // ✅ Added text color
+            onChange={handleChange}
+          />
           <Button className="mt-3" onClick={() => setStep(5)}>Next</Button>
         </motion.div>
       )}
