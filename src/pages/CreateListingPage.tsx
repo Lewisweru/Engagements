@@ -83,8 +83,7 @@ export default function CreateListing() {
     }
 
     setLoading(true);
-    const res = await fetch(`${import.meta.env.VITE_BACKEND_URL}/api/listings`,
-      {
+    const res = await fetch(`${import.meta.env.VITE_BACKEND_URL}/api/listings`, {
       method: "POST",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({
@@ -111,6 +110,13 @@ export default function CreateListing() {
     }
   };
 
+  // ✅ Reset Form (removed as it is unused)
+
+  // ✅ Dynamic Label for Followers/Subscribers
+  const getFollowersLabel = () => {
+    return selectedPlatform === "youtube" ? "Subscribers" : "Followers";
+  };
+
   return (
     <div className="max-w-4xl mx-auto py-10 px-6">
       <h1 className="text-3xl font-bold text-center mb-6">Sell Your Social Media Account</h1>
@@ -122,7 +128,6 @@ export default function CreateListing() {
             <motion.div
               key={platform.id}
               whileHover={{ scale: 1.05 }}
-              animate={{ scale: [1, 1.1, 1], transition: { repeat: Infinity, duration: 1.2 } }} // Heartbeat effect
               className={`p-4 text-white flex flex-col items-center rounded-lg cursor-pointer ${
                 selectedPlatform === platform.id ? "ring-4 ring-green-500" : "bg-gray-800 hover:bg-gray-700"
               }`}
@@ -143,6 +148,7 @@ export default function CreateListing() {
             name="username"
             className="w-full p-2 border rounded bg-gray-800 text-white" // ✅ Added text color
             onChange={handleChange}
+            value={formData.username}
           />
           <Button className="mt-3" onClick={() => setStep(2)}>Next</Button>
         </motion.div>
@@ -150,12 +156,13 @@ export default function CreateListing() {
 
       {step >= 2 && (
         <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} className="mt-6">
-          <label className="block">{selectedPlatform === "youtube" ? "Subscribers" : "Followers"}:</label>
+          <label className="block">{getFollowersLabel()}:</label>
           <input
             name="followers"
             type="number"
             className="w-full p-2 border rounded bg-gray-800 text-white" // ✅ Added text color
             onChange={handleChange}
+            value={formData.followers}
           />
           <Button className="mt-3" onClick={() => setStep(3)}>Next</Button>
         </motion.div>
@@ -167,7 +174,7 @@ export default function CreateListing() {
           <div className="grid grid-cols-2 md:grid-cols-3 gap-3">
             {niches.map((niche) => (
               <label key={niche} className="flex items-center space-x-2 bg-gray-800 p-2 rounded-lg cursor-pointer">
-                <input type="radio" name="niche" value={niche} onChange={handleChange} />
+                <input type="radio" name="niche" value={niche} onChange={handleChange} checked={formData.niche === niche} />
                 <span>{niche}</span>
               </label>
             ))}
@@ -184,6 +191,7 @@ export default function CreateListing() {
             type="number"
             className="w-full p-2 border rounded bg-gray-800 text-white" // ✅ Added text color
             onChange={handleChange}
+            value={formData.price}
           />
           <Button className="mt-3" onClick={() => setStep(5)}>Next</Button>
         </motion.div>
