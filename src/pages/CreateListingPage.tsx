@@ -37,10 +37,13 @@ export default function CreateListing() {
     const fetchUserId = async () => {
       if (currentUser) {
         try {
-          const res = await fetch(`${import.meta.env.VITE_BACKEND_URL}/api/users/${currentUser.uid}`);
+          const res = await fetch(`${import.meta.env.VITE_BACKEND_URL}/auth/current-user`, {
+            method: "GET",
+            credentials: "include", // Include cookies for authentication
+          });
           const data = await res.json();
           if (res.ok) {
-            setMongoUserId(data._id);
+            setMongoUserId(data._id); // Use the `_id` field from the backend
           } else {
             toast.error("Failed to fetch user data.");
           }
@@ -88,13 +91,13 @@ export default function CreateListing() {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
-          sellerId: mongoUserId, // ✅ Use MongoDB _id
+          user: mongoUserId, // Match the backend schema
           platform: selectedPlatform,
           username: formData.username,
-          followers: parseInt(formData.followers),
+          audienceSize: parseInt(formData.followers), // Match the backend schema
           niche: formData.niche,
           price: parseFloat(formData.price),
-          description: formData.description,
+          description: formData.description, // Optional field
         }),
       });
 
@@ -103,7 +106,7 @@ export default function CreateListing() {
         toast.success("Listing created successfully!");
         resetForm(); // Reset form after success
       } else {
-        toast.error(data.error || "Failed to create listing.");
+        toast.error(data.message || "Failed to create listing.");
       }
     } catch (error) {
       toast.error("An error occurred while creating the listing.");
