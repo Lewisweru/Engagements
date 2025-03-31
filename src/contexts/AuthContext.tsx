@@ -62,10 +62,24 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       toast.error("Failed to create account");
     }
   }
-
+  
+  
   async function login(email: string, password: string): Promise<UserCredential> {
     try {
+      // Log in with Firebase
       const result = await signInWithEmailAndPassword(auth, email, password);
+  
+      // Send login data to the backend for validation
+      const response = await fetch(`${import.meta.env.VITE_BACKEND_URL}/auth/login`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ email, password }),
+      });
+  
+      if (!response.ok) {
+        throw new Error("Backend login validation failed");
+      }
+  
       setCurrentUser(result.user);
       toast.success("Logged in successfully!");
       return result;
