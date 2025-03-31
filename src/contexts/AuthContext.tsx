@@ -12,7 +12,6 @@ import {
   signInWithPopup,
 } from "firebase/auth";
 import { auth } from "@/lib/firebase";
-import { FirebaseError } from "firebase/app";
 import { toast } from "react-hot-toast";
 
 interface AuthContextType {
@@ -45,18 +44,22 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       const userCredential = await createUserWithEmailAndPassword(auth, email, password);
       const user = userCredential.user;
 
-      // Send user data to MongoDB
-      await fetch(`${import.meta.env.VITE_BACKEND_URL}/api/users`, {
+      await fetch(`${import.meta.env.VITE_BACKEND_URL}/api/auth/firebase-user`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ firebaseUid: user.uid, email: user.email }),
+        body: JSON.stringify({
+          firebaseUid: user.uid,
+          email: user.email,
+          name: user.displayName || "Anonymous User",
+          profilePic: user.photoURL || "default-profile.png",
+        }),
       });
 
-      setCurrentUser(user); // Ensure UI updates
+      setCurrentUser(user);
       toast.success("Account created successfully!");
     } catch (error) {
+      console.error("Signup Error:", error);
       toast.error("Failed to create account");
-      throw error;
     }
   }
 
@@ -67,6 +70,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       toast.success("Logged in successfully!");
       return result;
     } catch (error) {
+      console.error("Login Error:", error);
       toast.error("Failed to log in");
       throw error;
     }
@@ -78,8 +82,8 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       setCurrentUser(null);
       toast.success("Logged out successfully");
     } catch (error) {
+      console.error("Logout Error:", error);
       toast.error("Failed to log out");
-      throw error;
     }
   }
 
@@ -88,8 +92,8 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       await sendPasswordResetEmail(auth, email);
       toast.success("Password reset email sent!");
     } catch (error) {
+      console.error("Password Reset Error:", error);
       toast.error("Failed to send password reset email");
-      throw error;
     }
   }
 
@@ -97,12 +101,13 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     try {
       if (auth.currentUser) {
         await updateProfile(auth.currentUser, { displayName });
-        setCurrentUser({ ...auth.currentUser, displayName });
+        await auth.currentUser.reload();
+        setCurrentUser(auth.currentUser);
         toast.success("Profile updated successfully!");
       }
     } catch (error) {
+      console.error("Profile Update Error:", error);
       toast.error("Failed to update profile");
-      throw error;
     }
   }
 
@@ -112,23 +117,22 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       const result = await signInWithPopup(auth, provider);
       const user = result.user;
 
-      // Send user data to MongoDB
-      await fetch(`${import.meta.env.VITE_BACKEND_URL}/api/users`, {
+      await fetch(`${import.meta.env.VITE_BACKEND_URL}/api/auth/firebase-user`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ firebaseUid: user.uid, email: user.email }),
+        body: JSON.stringify({
+          firebaseUid: user.uid,
+          email: user.email,
+          name: user.displayName || "Anonymous User",
+          profilePic: user.photoURL || "default-profile.png",
+        }),
       });
 
       setCurrentUser(user);
       toast.success("Logged in with Google successfully!");
     } catch (error) {
-      if (error instanceof FirebaseError) {
-        console.error("Firebase Error:", error);
-        toast.error(error.message);
-      } else {
-        console.error("Unexpected Error:", error);
-        toast.error("Something went wrong!");
-      }
+      console.error("Google Sign-In Error:", error);
+      toast.error("Something went wrong!");
     }
   }
 
@@ -137,7 +141,6 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       setCurrentUser(user);
       setLoading(false);
     });
-
     return unsubscribe;
   }, []);
 
