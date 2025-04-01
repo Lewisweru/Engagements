@@ -27,40 +27,50 @@ export default function DashboardPage() {
     pendingOrders: 0,
   });
   const [listings, setListings] = useState<AccountListing[]>([]);
+  const [loading, setLoading] = useState(true);
 
   // Fetch data on component mount
   useEffect(() => {
-    if (!currentUser) return;
-  
+    if (!currentUser) {
+      setLoading(false);
+      return;
+    }
+
     const fetchDashboardData = async () => {
       try {
+        setLoading(true);
+
         // ✅ Fetch MongoDB user ID using Firebase UID
         const userRes = await fetch(`${import.meta.env.VITE_BACKEND_URL}/api/users/${currentUser.uid}`);
         const userData = await userRes.json();
-        if (!userRes.ok) throw new Error("User not found");
-  
+        if (!userRes.ok) throw new Error(userData.message || "User not found");
+
         const sellerId = userData._id; // ✅ Get MongoDB User ID
-  
+
         // ✅ Fetch Listings (Filter by sellerId)
         const listingsRes = await fetch(`${import.meta.env.VITE_BACKEND_URL}/api/listings?sellerId=${sellerId}`);
         const listingsData = await listingsRes.json();
+        if (!listingsRes.ok) throw new Error(listingsData.message || "Failed to fetch listings");
         setListings(listingsData);
-  
+
         // ✅ Fetch Orders (Filter by sellerId)
         const ordersRes = await fetch(`${import.meta.env.VITE_BACKEND_URL}/api/orders?sellerId=${sellerId}`);
         const ordersData = await ordersRes.json();
-  
+        if (!ordersRes.ok) throw new Error(ordersData.message || "Failed to fetch orders");
+
         setStats({
           totalSales: ordersData.totalSales || 0,
           activeListings: listingsData.length,
           pendingOrders: ordersData.pendingOrders || 0,
         });
-  
-      } catch (error) {
-        toast.error("Failed to load dashboard data");
+      } catch (error: any) {
+        console.error("Dashboard Data Fetch Error:", error);
+        toast.error(error.message || "Failed to load dashboard data");
+      } finally {
+        setLoading(false);
       }
     };
-  
+
     fetchDashboardData();
   }, [currentUser]);
 
@@ -76,6 +86,14 @@ export default function DashboardPage() {
         return null;
     }
   };
+
+  if (loading) {
+    return <div className="text-center py-8">Loading...</div>;
+  }
+
+  if (!currentUser) {
+    return <div className="text-center py-8">Please log in to access the dashboard.</div>;
+  }
 
   return (
     <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
