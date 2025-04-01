@@ -41,56 +41,47 @@ export default function DashboardPage() {
     const fetchDashboardData = async () => {
       try {
         setLoading(true);
-        setError(null);
-
-        // 1. Fetch MongoDB user ID using Firebase UID
+        
         const userRes = await fetch(
           `${import.meta.env.VITE_BACKEND_URL}/api/users/firebase/${currentUser.uid}`,
           {
             headers: {
-              'Authorization': `Bearer ${await currentUser.getIdToken()}`
+              Authorization: `Bearer ${await currentUser.getIdToken()}`
             }
           }
         );
-
-        if (!userRes.ok) {
-          const errorData = await userRes.json();
-          throw new Error(errorData.message || "Failed to fetch user data");
-        }
-
+        
+        if (!userRes.ok) throw new Error("Failed to fetch user");
         const userData = await userRes.json();
-        const sellerId = userData._id;
-
-        // 2. Fetch Listings and Orders in parallel
+    
         const [listingsRes, ordersRes] = await Promise.all([
-          fetch(`${import.meta.env.VITE_BACKEND_URL}/api/listings?sellerId=${sellerId}`),
-          fetch(`${import.meta.env.VITE_BACKEND_URL}/api/orders?sellerId=${sellerId}`)
+          fetch(`${import.meta.env.VITE_BACKEND_URL}/api/listings?sellerId=${userData._id}`),
+          fetch(`${import.meta.env.VITE_BACKEND_URL}/api/orders?sellerId=${userData._id}`)
         ]);
-
+    
         if (!listingsRes.ok || !ordersRes.ok) {
-          const listingsError = !listingsRes.ok ? await listingsRes.json() : null;
-          const ordersError = !ordersRes.ok ? await ordersRes.json() : null;
-          throw new Error(
-            listingsError?.message || ordersError?.message || "Failed to fetch dashboard data"
-          );
+          throw new Error("Failed to fetch dashboard data");
         }
-
-        const [listingsData, ordersData] = await Promise.all([
+    
+        const [listings, orders] = await Promise.all([
           listingsRes.json(),
           ordersRes.json()
         ]);
-
-        setListings(listingsData);
+    
+        setListings(listings);
         setStats({
-          totalSales: ordersData.totalSales || 0,
-          activeListings: listingsData.length,
-          pendingOrders: ordersData.pendingOrders || 0,
+          totalSales: orders.totalSales,
+          activeListings: listings.length,
+          pendingOrders: orders.pendingOrders
         });
-
-      } catch (error: any) {
-        console.error("Dashboard Data Fetch Error:", error);
-        setError(error.message);
-        toast.error(error.message || "Failed to load dashboard data");
+    
+      } catch (error) {
+        console.error("Dashboard error:", error);
+        if (error instanceof Error) {
+          toast.error(error.message);
+        } else {
+          toast.error('An unexpected error occurred');
+        }
       } finally {
         setLoading(false);
       }
