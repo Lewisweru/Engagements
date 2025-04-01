@@ -1,231 +1,237 @@
-import { useState, useEffect } from "react";
-import { motion } from "framer-motion";
-import { Instagram, Youtube, Facebook, Twitter, TrendingUp, PlusCircle } from "lucide-react";
-import { toast } from "react-hot-toast";
 import { useAuth } from "@/contexts/AuthContext";
-import { Button } from "@/components/ui/button";
+import { useState, useEffect } from "react";
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { motion } from "framer-motion";
+import { Instagram, Twitter, Youtube, DollarSign, Users, Activity, Loader2 } from "lucide-react";
+import toast from "react-hot-toast";
 
-// ✅ Available Platforms
-const platforms = [
-  { id: "instagram", name: "Instagram", icon: <Instagram className="h-6 w-6" />, color: "bg-pink-500" },
-  { id: "youtube", name: "YouTube", icon: <Youtube className="h-6 w-6" />, color: "bg-red-500" },
-  { id: "facebook", name: "Facebook", icon: <Facebook className="h-6 w-6" />, color: "bg-blue-600" },
-  { id: "twitter", name: "Twitter", icon: <Twitter className="h-6 w-6" />, color: "bg-blue-400" },
-  { id: "tiktok", name: "TikTok", icon: <TrendingUp className="h-6 w-6" />, color: "bg-black" },
-];
+interface AccountStats {
+  totalSales: number;
+  activeListings: number;
+  pendingOrders: number;
+}
 
-// ✅ Available Niches
-const niches = ["Fashion", "Tech", "Fitness", "Gaming", "Business", "Lifestyle"];
+interface AccountListing {
+  _id: string;
+  platform: "instagram" | "twitter" | "youtube";
+  followers: number;
+  price: number;
+  status: "active" | "pending" | "sold";
+  title?: string;
+}
 
-export default function CreateListing() {
+export default function DashboardPage() {
   const { currentUser } = useAuth();
-  const [mongoUserId, setMongoUserId] = useState<string | null>(null);
-  const [selectedPlatform, setSelectedPlatform] = useState<string | null>(null);
-  const [step, setStep] = useState(0); // Track progress
-  const [loading, setLoading] = useState(false);
-  const [fetchingUser, setFetchingUser] = useState(true);
-  const [formData, setFormData] = useState({
-    username: "",
-    followers: "",
-    niche: "",
-    price: "",
-    description: "",
+  const [stats, setStats] = useState<AccountStats>({
+    totalSales: 0,
+    activeListings: 0,
+    pendingOrders: 0,
   });
+  const [listings, setListings] = useState<AccountListing[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
 
-  // ✅ Fetch MongoDB User ID
+  // Fetch all dashboard data
   useEffect(() => {
-    const fetchUserId = async () => {
-      if (currentUser) {
-        try {
-          const res = await fetch(`${import.meta.env.VITE_BACKEND_URL}/auth/current-user`, {
-            method: "GET",
-            credentials: "include", // Include cookies for authentication
-          });
-          const data = await res.json();
-          if (res.ok) {
-            setMongoUserId(data._id); // Use the `_id` field from the backend
-          } else {
-            toast.error("Failed to fetch user data.");
+    const fetchDashboardData = async () => {
+      if (!currentUser) {
+        setError("Please login to view dashboard");
+        setLoading(false);
+        return;
+      }
+
+      try {
+        setLoading(true);
+        setError(null);
+
+        // 1. Get user data first
+        const userRes = await fetch(
+          `${import.meta.env.VITE_BACKEND_URL}/api/users/firebase/${currentUser.uid}`,
+          {
+            headers: {
+              Authorization: `Bearer ${await currentUser.getIdToken()}`,
+            },
           }
-        } catch (error) {
-          toast.error("Error fetching user data.");
-        } finally {
-          setFetchingUser(false);
+        );
+
+        if (!userRes.ok) {
+          throw new Error("Failed to fetch user data");
         }
+
+        const userData = await userRes.json();
+        const sellerId = userData._id;
+
+        // 2. Fetch listings and orders in parallel
+        const [listingsRes, ordersRes] = await Promise.all([
+          fetch(`${import.meta.env.VITE_BACKEND_URL}/api/listings?sellerId=${sellerId}`),
+          fetch(`${import.meta.env.VITE_BACKEND_URL}/api/orders?sellerId=${sellerId}`),
+        ]);
+
+        // Handle errors
+        if (!listingsRes.ok || !ordersRes.ok) {
+          const listingsError = await listingsRes.json().catch(() => null);
+          const ordersError = await ordersRes.json().catch(() => null);
+          throw new Error(
+            listingsError?.message || ordersError?.message || "Failed to fetch dashboard data"
+          );
+        }
+
+        // Process data
+        const [listingsData, ordersData] = await Promise.all([
+          listingsRes.json(),
+          ordersRes.json(),
+        ]);
+
+        setListings(listingsData);
+        setStats({
+          totalSales: ordersData.totalSales || 0,
+          activeListings: listingsData.length,
+          pendingOrders: ordersData.pendingOrders || 0,
+        });
+
+      } catch (err: any) {
+        console.error("Dashboard error:", err);
+        setError(err.message || "Failed to load dashboard");
+        toast.error(err.message || "Failed to load dashboard data");
+      } finally {
+        setLoading(false);
       }
     };
-    fetchUserId();
+
+    fetchDashboardData();
   }, [currentUser]);
 
-  // ✅ Platform Selection
-  const handleSelectPlatform = (platform: string) => {
-    setSelectedPlatform(platform);
-    setStep(1);
+  const PlatformIcon = ({ platform }: { platform: string }) => {
+    const icons = {
+      instagram: <Instagram className="h-5 w-5 text-pink-500" />,
+      twitter: <Twitter className="h-5 w-5 text-blue-400" />,
+      youtube: <Youtube className="h-5 w-5 text-red-500" />,
+    };
+    return icons[platform as keyof typeof icons] || null;
   };
 
-  // ✅ Handle Input Changes
-  const handleChange = (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>) => {
-    setFormData({ ...formData, [e.target.name]: e.target.value });
-  };
+  if (loading) {
+    return (
+      <div className="flex justify-center items-center h-64">
+        <Loader2 className="h-8 w-8 animate-spin" />
+      </div>
+    );
+  }
 
-  // ✅ Handle Listing Submission
-  const handleSubmit = async () => {
-    if (fetchingUser) {
-      toast.error("Fetching user data, please wait...");
-      return;
-    }
+  if (error) {
+    return (
+      <div className="text-center py-8">
+        <p className="text-red-500">{error}</p>
+        <button 
+          onClick={() => window.location.reload()}
+          className="mt-4 px-4 py-2 bg-blue-500 text-white rounded hover:bg-blue-600"
+        >
+          Retry
+        </button>
+      </div>
+    );
+  }
 
-    if (!mongoUserId) {
-      toast.error("User data not found. Please try again.");
-      return;
-    }
-
-    if (!selectedPlatform || !formData.username || !formData.followers || !formData.niche || !formData.price) {
-      toast.error("Please fill out all required fields.");
-      return;
-    }
-
-    setLoading(true);
-    try {
-      const res = await fetch(`${import.meta.env.VITE_BACKEND_URL}/api/listings`, {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          user: mongoUserId, // Match the backend schema
-          platform: selectedPlatform,
-          username: formData.username,
-          audienceSize: parseInt(formData.followers), // Match the backend schema
-          niche: formData.niche,
-          price: parseFloat(formData.price),
-          description: formData.description, // Optional field
-        }),
-      });
-
-      const data = await res.json();
-      if (res.ok) {
-        toast.success("Listing created successfully!");
-        resetForm(); // Reset form after success
-      } else {
-        toast.error(data.message || "Failed to create listing.");
-      }
-    } catch (error) {
-      toast.error("An error occurred while creating the listing.");
-    } finally {
-      setLoading(false);
-    }
-  };
-
-  // ✅ Reset Form
-  const resetForm = () => {
-    setStep(0);
-    setSelectedPlatform(null);
-    setFormData({ username: "", followers: "", niche: "", price: "", description: "" });
-  };
-
-  // ✅ Dynamic Label for Followers/Subscribers
-  const getFollowersLabel = () => {
-    return selectedPlatform === "youtube" ? "Subscribers" : "Followers";
-  };
+  if (!currentUser) {
+    return (
+      <div className="text-center py-8">
+        <p>Please login to view dashboard</p>
+      </div>
+    );
+  }
 
   return (
-    <div className="max-w-4xl mx-auto py-10 px-6">
-      <h1 className="text-3xl font-bold text-center mb-6">Sell Your Social Media Account</h1>
+    <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
+      <motion.div 
+        initial={{ opacity: 0, y: 20 }} 
+        animate={{ opacity: 1, y: 0 }} 
+        className="space-y-8"
+      >
+        {/* Header */}
+        <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
+          <h1 className="text-3xl font-bold">Dashboard</h1>
+          <p className="text-muted-foreground">
+            Welcome back, {currentUser.email || "User"}
+          </p>
+        </div>
 
-      {/* ✅ Step 1: Select Platform */}
-      {step === 0 && (
-        <motion.div className="grid grid-cols-2 md:grid-cols-5 gap-4">
-          {platforms.map((platform) => (
+        {/* Stats Cards */}
+        <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+          {[
+            {
+              icon: <DollarSign className="h-8 w-8 text-green-500" />,
+              value: `Ksh ${stats.totalSales.toLocaleString()}`,
+              label: "Total Sales",
+            },
+            {
+              icon: <Users className="h-8 w-8 text-blue-500" />,
+              value: stats.activeListings,
+              label: "Active Listings",
+            },
+            {
+              icon: <Activity className="h-8 w-8 text-purple-500" />,
+              value: stats.pendingOrders,
+              label: "Pending Orders",
+            },
+          ].map((stat, index) => (
             <motion.div
-              key={platform.id}
-              whileHover={{ scale: 1.05 }}
-              animate={{ scale: [1, 1.1, 1], transition: { repeat: Infinity, duration: 1.5 } }} // ✅ Thumping effect
-              className={`p-4 text-white flex flex-col items-center rounded-lg cursor-pointer ${
-                selectedPlatform === platform.id ? "ring-4 ring-green-500" : "bg-gray-800 hover:bg-gray-700"
-              }`}
-              onClick={() => handleSelectPlatform(platform.id)}
+              key={index}
+              whileHover={{ scale: 1.02 }}
+              className="bg-card p-6 rounded-lg shadow-lg"
             >
-              <div className={`p-3 rounded-full ${platform.color}`}>{platform.icon}</div>
-              <span className="mt-2 font-medium">{platform.name}</span>
+              <div className="flex items-center justify-between">
+                {stat.icon}
+                <span className="text-2xl font-bold">{stat.value}</span>
+              </div>
+              <p className="mt-2 text-muted-foreground">{stat.label}</p>
             </motion.div>
           ))}
-        </motion.div>
-      )}
+        </div>
 
-      {/* ✅ Step-by-step form */}
-      {step >= 1 && (
-        <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} className="mt-6">
-          <label className="block">Username:</label>
-          <input
-            name="username"
-            className="w-full p-2 border rounded bg-gray-800 text-white"
-            onChange={handleChange}
-            value={formData.username}
-          />
-          <Button className="mt-3" onClick={() => setStep(2)}>Next</Button>
-        </motion.div>
-      )}
+        {/* Listings Tab */}
+        <Tabs defaultValue="listings" className="w-full">
+          <TabsList className="grid grid-cols-2">
+            <TabsTrigger value="listings">My Listings</TabsTrigger>
+            <TabsTrigger value="orders">Orders</TabsTrigger>
+          </TabsList>
 
-      {step >= 2 && (
-        <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} className="mt-6">
-          <label className="block">{getFollowersLabel()}:</label>
-          <input
-            name="followers"
-            type="number"
-            className="w-full p-2 border rounded bg-gray-800 text-white"
-            onChange={handleChange}
-            value={formData.followers}
-          />
-          <Button className="mt-3" onClick={() => setStep(3)}>Next</Button>
-        </motion.div>
-      )}
-
-      {step >= 3 && (
-        <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} className="mt-6">
-          <label className="block">Select Niche:</label>
-          <div className="grid grid-cols-2 md:grid-cols-3 gap-3">
-            {niches.map((niche) => (
-              <label key={niche} className="flex items-center space-x-2 bg-gray-800 p-2 rounded-lg cursor-pointer">
-                <input
-                  type="radio"
-                  name="niche"
-                  value={niche}
-                  onChange={handleChange}
-                  checked={formData.niche === niche}
-                />
-                <span>{niche}</span>
-              </label>
-            ))}
-          </div>
-          <Button className="mt-3" onClick={() => setStep(4)}>Next</Button>
-        </motion.div>
-      )}
-
-      {step >= 4 && (
-        <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} className="mt-6">
-          <label className="block">Price (Ksh):</label>
-          <input
-            name="price"
-            type="number"
-            className="w-full p-2 border rounded bg-gray-800 text-white"
-            onChange={handleChange}
-            value={formData.price}
-          />
-          <Button className="mt-3" onClick={() => setStep(5)}>Next</Button>
-        </motion.div>
-      )}
-
-      {step >= 5 && (
-        <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} className="mt-6">
-          <Button
-            className="w-full bg-green-500 hover:bg-green-600"
-            onClick={handleSubmit}
-            disabled={loading}
-          >
-            <PlusCircle className="h-5 w-5 mr-2" />
-            {loading ? "Submitting..." : "Submit Listing"}
-          </Button>
-        </motion.div>
-      )}
+          <TabsContent value="listings" className="mt-6">
+            {listings.length === 0 ? (
+              <div className="text-center py-12 border rounded-lg">
+                <p className="text-muted-foreground">No listings found</p>
+              </div>
+            ) : (
+              <div className="grid gap-4">
+                {listings.map((listing) => (
+                  <motion.div
+                    key={listing._id}
+                    initial={{ opacity: 0 }}
+                    animate={{ opacity: 1 }}
+                    className="bg-card p-4 rounded-lg shadow flex items-center justify-between"
+                  >
+                    <div className="flex items-center gap-4">
+                      <PlatformIcon platform={listing.platform} />
+                      <div>
+                        <h3 className="font-semibold">
+                          {listing.title || `${listing.platform} Account`}
+                        </h3>
+                        <div className="flex gap-2 text-sm text-muted-foreground">
+                          <span>{listing.followers.toLocaleString()} followers</span>
+                          <span>•</span>
+                          <span className="capitalize">{listing.status}</span>
+                        </div>
+                      </div>
+                    </div>
+                    <span className="font-medium">
+                      Ksh {listing.price.toLocaleString()}
+                    </span>
+                  </motion.div>
+                ))}
+              </div>
+            )}
+          </TabsContent>
+        </Tabs>
+      </motion.div>
     </div>
   );
 }
