@@ -21,7 +21,7 @@ export function truncateString(str: string, length: number): string {
 /** Fetch OAuth Token (Optional: For debugging or testing) */
 export async function fetchPesapalToken(): Promise<string> {
   try {
-    const response = await axios.get(`${import.meta.env.VITE_BACKEND_URL}/api/pesapal/token`);
+    const response = await axios.post(`${import.meta.env.VITE_BACKEND_URL}/api/pesapal/token`);
     return response.data.token;
   } catch (error) {
     console.error("Error fetching Pesapal token:", error);
