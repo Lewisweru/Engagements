@@ -43,7 +43,7 @@ export default function DashboardPage() {
         setLoading(true);
         
         const userRes = await fetch(
-          `${import.meta.env.VITE_BACKEND_URL}/api/users/firebase/${currentUser.uid}`,
+          `${import.meta.env.VITE_BACKEND_URL}/api/users/${currentUser.uid}`,
           {
             headers: {
               Authorization: `Bearer ${await currentUser.getIdToken()}`
