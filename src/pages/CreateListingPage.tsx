@@ -141,7 +141,11 @@ export default function CreateListingPage() {
             <motion.div
               key={platform.id}
               whileHover={{ scale: 1.05 }}
-              animate={{ scale: [1, 1.1, 1], transition: { repeat: Infinity, duration: 1.5 } }} // ✅ Thumping effect
+              animate={
+                selectedPlatform === platform.id
+                  ? { scale: [1, 1.1, 1], transition: { repeat: Infinity, duration: 1.5 } } // ✅ Thumping effect
+                  : undefined
+              }
               className={`p-4 text-white flex flex-col items-center rounded-lg cursor-pointer ${
                 selectedPlatform === platform.id ? "ring-4 ring-green-500" : "bg-gray-800 hover:bg-gray-700"
               }`}
@@ -151,6 +155,28 @@ export default function CreateListingPage() {
               <span className="mt-2 font-medium">{platform.name}</span>
             </motion.div>
           ))}
+        </motion.div>
+      )}
+
+      {/* ✅ Display Selected Platform */}
+      {selectedPlatform && step > 0 && (
+        <motion.div
+          initial={{ opacity: 0 }}
+          animate={{ opacity: 1 }}
+          className="flex items-center justify-center mt-6"
+        >
+          <div className="flex items-center space-x-4">
+            <div
+              className={`p-4 rounded-full ${
+                platforms.find((p) => p.id === selectedPlatform)?.color || "bg-gray-800"
+              }`}
+            >
+              {platforms.find((p) => p.id === selectedPlatform)?.icon}
+            </div>
+            <span className="text-lg font-semibold text-gray-300">
+              {platforms.find((p) => p.id === selectedPlatform)?.name}
+            </span>
+          </div>
         </motion.div>
       )}
 
@@ -212,6 +238,20 @@ export default function CreateListingPage() {
             className="w-full p-3 border rounded bg-gray-800 text-white focus:outline-none focus:ring-2 focus:ring-green-500"
             onChange={handleChange}
             value={formData.price}
+          />
+          <Button className="mt-3" onClick={() => setStep(5)}>Next</Button>
+        </motion.div>
+      )}
+
+      {step >= 5 && (
+        <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} className="mt-6">
+          <label className="block text-gray-300 text-lg font-semibold">Description (Optional):</label>
+          <textarea
+            name="description"
+            className="w-full p-3 border rounded bg-gray-800 text-white focus:outline-none focus:ring-2 focus:ring-green-500"
+            onChange={handleChange}
+            value={formData.description}
+            rows={4}
           />
           <Button className="mt-3" onClick={handleSubmit} disabled={loading}>
             {loading ? "Submitting..." : "Submit Listing"}
