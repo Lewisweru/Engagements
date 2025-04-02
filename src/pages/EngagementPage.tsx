@@ -6,6 +6,7 @@ import { Button } from "@/components/ui/button";
 import { useCartStore } from "@/lib/store";
 import toast from "react-hot-toast";
 import "@/styles/emojiBackground.css"; // Import the emoji background styles
+import { initiatePesapalPayment } from "@/lib/utils";
 
 /** Pricing structure */
 const PRICING = {
@@ -84,6 +85,25 @@ export default function EngagementPage() {
       type: "",
     });
     toast.success("Added to cart!");
+  };
+
+  const handleCheckout = async () => {
+    try {
+      const redirectUrl = await initiatePesapalPayment(
+        "unique-order-id", // Replace with a unique order ID
+        totalPrice, // Amount to charge
+        "Social Media Engagement Services", // Description
+        "customer@example.com", // Customer email
+        "John", // Customer first name
+        "Doe", // Customer last name
+        `${window.location.origin}/payment-success` // Callback URL
+      );
+
+      // Redirect to Pesapal payment page
+      window.location.href = redirectUrl;
+    } catch (error) {
+      toast.error("Failed to initiate payment. Please try again.");
+    }
   };
 
   return (
@@ -192,6 +212,9 @@ export default function EngagementPage() {
             <p className="text-lg font-bold text-green-400">Total: Ksh {totalPrice.toFixed(2)}</p>
             <Button onClick={handleAddToCart} className="w-full bg-green-500 hover:bg-green-600">
               <PlusCircle className="h-5 w-5 mr-2" /> Add to Cart
+            </Button>
+            <Button onClick={handleCheckout} className="w-full bg-blue-500 hover:bg-blue-600">
+              Proceed to Checkout
             </Button>
           </motion.div>
         )}
