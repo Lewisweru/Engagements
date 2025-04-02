@@ -1,9 +1,10 @@
 import { useState, useEffect } from "react";
 import { motion } from "framer-motion";
-import { Instagram, Youtube, Facebook, Twitter, TrendingUp, PlusCircle } from "lucide-react";
+import { Instagram, Youtube, Facebook, Twitter, TrendingUp } from "lucide-react";
 import { toast } from "react-hot-toast";
 import { useAuth } from "@/contexts/AuthContext";
 import { Button } from "@/components/ui/button";
+import "@/styles/fonts.css"; // Import custom font styles
 
 // ✅ Available Platforms
 const platforms = [
@@ -128,8 +129,8 @@ export default function CreateListingPage() {
   };
 
   return (
-    <div className="max-w-4xl mx-auto py-10 px-6">
-      <h1 className="text-3xl font-bold text-center mb-6">Sell Your Social Media Account</h1>
+    <div className="max-w-4xl mx-auto py-10 px-6 font-poppins">
+      <h1 className="text-4xl font-bold text-center mb-6 text-gray-100">Sell Your Social Media Account</h1>
 
       {/* ✅ Step 1: Select Platform */}
       {step === 0 && (
@@ -154,10 +155,10 @@ export default function CreateListingPage() {
       {/* ✅ Step-by-step form */}
       {step >= 1 && (
         <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} className="mt-6">
-          <label className="block">Username:</label>
+          <label className="block text-gray-300 text-lg font-semibold">Username:</label>
           <input
             name="username"
-            className="w-full p-2 border rounded bg-gray-800 text-white"
+            className="w-full p-3 border rounded bg-gray-800 text-white focus:outline-none focus:ring-2 focus:ring-green-500"
             onChange={handleChange}
             value={formData.username}
           />
@@ -167,11 +168,11 @@ export default function CreateListingPage() {
 
       {step >= 2 && (
         <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} className="mt-6">
-          <label className="block">{getFollowersLabel()}:</label>
+          <label className="block text-gray-300 text-lg font-semibold">{getFollowersLabel()}:</label>
           <input
             name="followers"
             type="number"
-            className="w-full p-2 border rounded bg-gray-800 text-white"
+            className="w-full p-3 border rounded bg-gray-800 text-white focus:outline-none focus:ring-2 focus:ring-green-500"
             onChange={handleChange}
             value={formData.followers}
           />
@@ -181,10 +182,10 @@ export default function CreateListingPage() {
 
       {step >= 3 && (
         <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} className="mt-6">
-          <label className="block">Select Niche:</label>
+          <label className="block text-gray-300 text-lg font-semibold">Select Niche:</label>
           <div className="grid grid-cols-2 md:grid-cols-3 gap-3">
             {niches.map((niche) => (
-              <label key={niche} className="flex items-center space-x-2 bg-gray-800 p-2 rounded-lg cursor-pointer">
+              <label key={niche} className="flex items-center space-x-2 bg-gray-800 p-3 rounded-lg cursor-pointer">
                 <input
                   type="radio"
                   name="niche"
@@ -192,7 +193,7 @@ export default function CreateListingPage() {
                   onChange={handleChange}
                   checked={formData.niche === niche}
                 />
-                <span>{niche}</span>
+                <span className="text-gray-300">{niche}</span>
               </label>
             ))}
           </div>
@@ -202,26 +203,15 @@ export default function CreateListingPage() {
 
       {step >= 4 && (
         <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} className="mt-6">
-          <label className="block">Price (Ksh):</label>
+          <label className="block text-gray-300 text-lg font-semibold">Price (Ksh):</label>
           <input
             name="price"
             type="number"
-            className="w-full p-2 border rounded bg-gray-800 text-white"
+            className="w-full p-3 border rounded bg-gray-800 text-white focus:outline-none focus:ring-2 focus:ring-green-500"
             onChange={handleChange}
             value={formData.price}
           />
-          <Button className="mt-3" onClick={() => setStep(5)}>Next</Button>
-        </motion.div>
-      )}
-
-      {step >= 5 && (
-        <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} className="mt-6">
-          <Button
-            className="w-full bg-green-500 hover:bg-green-600"
-            onClick={handleSubmit}
-            disabled={loading}
-          >
-            <PlusCircle className="h-5 w-5 mr-2" />
+          <Button className="mt-3" onClick={handleSubmit} disabled={loading}>
             {loading ? "Submitting..." : "Submit Listing"}
           </Button>
         </motion.div>
