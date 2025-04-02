@@ -7,6 +7,7 @@ import { useCartStore } from "@/lib/store";
 import toast from "react-hot-toast";
 import "@/styles/emojiBackground.css"; // Import the emoji background styles
 import { initiatePesapalPayment } from "@/lib/utils";
+import { v4 as uuidv4 } from "uuid";
 
 /** Pricing structure */
 const PRICING = {
@@ -89,8 +90,9 @@ export default function EngagementPage() {
 
   const handleCheckout = async () => {
     try {
+      const orderId = uuidv4(); // Generate a unique order ID
       const redirectUrl = await initiatePesapalPayment(
-        "unique-order-id", // Replace with a unique order ID
+        orderId,
         totalPrice, // Amount to charge
         "Social Media Engagement Services", // Description
         "customer@example.com", // Customer email

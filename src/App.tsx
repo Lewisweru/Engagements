@@ -11,6 +11,7 @@ import CartSidebar from "./components/CartSidebar";
 import { ThemeProvider } from "./components/ThemeProvider";
 import { AuthProvider } from "./contexts/AuthContext";
 import CreateListingPage from "./pages/CreateListingPage"; // ✅ Import the new page
+import PaymentSuccessPage from "./pages/PaymentSuccessPage"; // ✅ Import the success page
 
 function App() {
   return (
@@ -26,7 +27,8 @@ function App() {
                 <Route path="/marketplace" element={<MarketplacePage />} />
                 <Route path="/engagement" element={<EngagementPage />} />
                 <Route path="/auth" element={<AuthPage />} />
-                <Route path="/create-listing" element={<CreateListingPage />} /> {/* ✅ New Route */}
+                <Route path="/create-listing" element={<CreateListingPage />} />
+                <Route path="/payment-success" element={<PaymentSuccessPage />} /> {/* ✅ New Route */}
               </Routes>
             </main>
             <CartSidebar />
