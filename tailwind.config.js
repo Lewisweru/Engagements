@@ -6,6 +6,7 @@ export default {
     './components/**/*.{ts,tsx}',
     './app/**/*.{ts,tsx}',
     './src/**/*.{ts,tsx}',
+    "./src/**/*.{js,jsx,ts,tsx}", // Ensure this includes your components and pages
   ],
   prefix: "",
   theme: {
