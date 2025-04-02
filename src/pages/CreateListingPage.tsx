@@ -17,7 +17,7 @@ const platforms = [
 // ✅ Available Niches
 const niches = ["Fashion", "Tech", "Fitness", "Gaming", "Business", "Lifestyle"];
 
-export default function CreateListing() {
+export default function CreateListingPage() {
   const { currentUser } = useAuth();
   const [mongoUserId, setMongoUserId] = useState<string | null>(null);
   const [selectedPlatform, setSelectedPlatform] = useState<string | null>(null);
