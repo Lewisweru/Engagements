@@ -38,15 +38,17 @@ export default function CreateListingPage() {
     const fetchUserId = async () => {
       if (currentUser) {
         try {
-          const res = await fetch(`${import.meta.env.VITE_BACKEND_URL}/auth/current-user`, {
+          const res = await fetch(`${import.meta.env.VITE_BACKEND_URL}/api/users/${currentUser.uid}`, {
             method: "GET",
-            credentials: "include", // Include cookies for authentication
+            headers: {
+              Authorization: `Bearer ${await currentUser.getIdToken()}`, // Include Firebase token for authentication
+            },
           });
           const data = await res.json();
           if (res.ok) {
             setMongoUserId(data._id); // Use the `_id` field from the backend
           } else {
-            toast.error("Failed to fetch user data.");
+            toast.error(data.message || "Failed to fetch user data.");
           }
         } catch (error) {
           toast.error("Error fetching user data.");
