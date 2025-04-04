@@ -33,24 +33,12 @@ export default function Navbar() {
 
           {/* Desktop Navigation */}
           <div className="hidden md:flex md:items-center md:space-x-6">
-            <Link to="/marketplace">
-              <Button variant="ghost">Marketplace</Button>
-            </Link>
             <Link to="/engagement">
               <Button variant="ghost">Engagement</Button>
             </Link>
             {currentUser && (
               <Link to="/dashboard">
                 <Button variant="ghost">Dashboard</Button>
-              </Link>
-            )}
-
-            {/* Sell an Account Button */}
-            {currentUser && (
-              <Link to="/create-listing">
-                <Button variant="default" className="bg-green-500 hover:bg-green-600">
-                  Sell an Account
-                </Button>
               </Link>
             )}
 
@@ -91,23 +79,12 @@ export default function Navbar() {
       {isMenuOpen && (
         <div className="md:hidden bg-gray-800 border-t border-gray-700">
           <div className="px-4 py-2 space-y-2">
-            <Link to="/marketplace" className="block text-white py-2 hover:bg-gray-700 px-3 rounded">
-              Marketplace
-            </Link>
             <Link to="/engagement" className="block text-white py-2 hover:bg-gray-700 px-3 rounded">
               Engagement
             </Link>
             {currentUser && (
               <Link to="/dashboard" className="block text-white py-2 hover:bg-gray-700 px-3 rounded">
                 Dashboard
-              </Link>
-            )}
-            {currentUser && (
-              <Link
-                to="/create-listing"
-                className="block text-center py-2 bg-green-500 text-white rounded hover:bg-green-600"
-              >
-                Sell an Account
               </Link>
             )}
             {currentUser ? (

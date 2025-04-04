@@ -1,195 +1,194 @@
-import { useAuth } from "@/contexts/AuthContext";
-import { useState, useEffect } from "react";
-import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { useState, useEffect } from "react"; // Import React
+import { useAuth } from "@/contexts/AuthContext"; // Ensure path is correct
 import { motion } from "framer-motion";
-import { Instagram, Twitter, Youtube, DollarSign, Users, Activity } from "lucide-react";
+import { DollarSign, Users, Activity, Loader2 } from "lucide-react"; // Added Loader2
 import toast from "react-hot-toast";
 
-interface AccountStats {
-  totalSales: number;
-  activeListings: number;
+// Interface for the expected API response structure for stats
+interface OrderStats {
+  activeOrders: number;
   pendingOrders: number;
-}
-
-interface AccountListing {
-  _id: string;
-  platform: "instagram" | "twitter" | "youtube";
-  followers: number;
-  price: number;
-  status: "active" | "pending" | "sold";
+  completedOrders: number;
 }
 
 export default function DashboardPage() {
   const { currentUser } = useAuth();
-  const [stats, setStats] = useState<AccountStats>({
-    totalSales: 0,
-    activeListings: 0,
-    pendingOrders: 0,
-  });
-  const [listings, setListings] = useState<AccountListing[]>([]);
-  const [loading, setLoading] = useState(true);
-  const [error, setError] = useState<string | null>(null);
+  const [stats, setStats] = useState<OrderStats | null>(null); // Initialize stats as null
+  const [loading, setLoading] = useState<boolean>(true); // Add loading state, start as true
+  const [error, setError] = useState<string | null>(null); // Keep error state
 
-  // Fetch data on component mount
+  // Fetch data on component mount or when currentUser changes
   useEffect(() => {
+    console.log("DashboardPage Effect: Running. currentUser:", currentUser ? currentUser.uid : 'null');
+    // Reset states when currentUser changes (e.g., logout/login)
+    setLoading(true);
+    setError(null);
+    setStats(null);
+
     if (!currentUser) {
-      setLoading(false);
-      setError("Please log in to access the dashboard");
-      return;
+      console.log("DashboardPage Effect: No currentUser, setting error.");
+      setError("Please log in to view the dashboard.");
+      setLoading(false); // Stop loading if no user
+      return; // Exit effect early
     }
 
     const fetchDashboardData = async () => {
+      let token = null; // Declare token variable outside try block
       try {
-        setLoading(true);
-        
-        const userRes = await fetch(
-          `${import.meta.env.VITE_BACKEND_URL}/api/users/${currentUser.uid}`,
-          {
-            headers: {
-              Authorization: `Bearer ${await currentUser.getIdToken()}`
-            }
-          }
-        );
-        
-        if (!userRes.ok) throw new Error("Failed to fetch user");
-        const userData = await userRes.json();
-    
-        const [listingsRes, ordersRes] = await Promise.all([
-          fetch(`${import.meta.env.VITE_BACKEND_URL}/api/listings?sellerId=${userData._id}`),
-          fetch(`${import.meta.env.VITE_BACKEND_URL}/api/orders?sellerId=${userData._id}`)
-        ]);
-    
-        if (!listingsRes.ok || !ordersRes.ok) {
-          throw new Error("Failed to fetch dashboard data");
-        }
-    
-        const [listings, orders] = await Promise.all([
-          listingsRes.json(),
-          ordersRes.json()
-        ]);
-    
-        setListings(listings);
-        setStats({
-          totalSales: orders.totalSales,
-          activeListings: listings.length,
-          pendingOrders: orders.pendingOrders
+        console.log("DashboardPage Effect: Fetching token for user:", currentUser.uid);
+        token = await currentUser.getIdToken(); // Get token first
+        console.log("DashboardPage Effect: Token obtained.");
+
+        const apiUrl = `${import.meta.env.VITE_BACKEND_URL}/api/orders/stats?userId=${currentUser.uid}`;
+        console.log("DashboardPage Effect: Fetching stats from:", apiUrl);
+
+        const ordersRes = await fetch(apiUrl, {
+          method: 'GET', // Explicitly state GET method
+          headers: {
+            Authorization: `Bearer ${token}`,
+            'Content-Type': 'application/json' // Usually not needed for GET but doesn't hurt
+          },
         });
-    
-      } catch (error) {
-        console.error("Dashboard error:", error);
-        if (error instanceof Error) {
-          toast.error(error.message);
-        } else {
-          toast.error('An unexpected error occurred');
+
+        console.log(`DashboardPage Effect: Fetch response status: ${ordersRes.status}`);
+
+        if (!ordersRes.ok) {
+           let errorBody = `Status: ${ordersRes.status} ${ordersRes.statusText}`;
+           try {
+                const errorJson = await ordersRes.json(); // Try parsing JSON error from backend
+                errorBody = errorJson.message || JSON.stringify(errorJson);
+           } catch (parseError) {
+                // If parsing fails, use text
+                try {
+                    errorBody = await ordersRes.text();
+                } catch (textError) { /* Ignore further errors */ }
+           }
+           console.error("API Error Response Body:", errorBody);
+           throw new Error(`Failed to fetch order stats: ${errorBody}`);
         }
+
+        const statsData: OrderStats = await ordersRes.json();
+        console.log("DashboardPage Effect: Stats data received:", statsData);
+
+        // Validate received data structure
+        if (typeof statsData.activeOrders !== 'number' ||
+            typeof statsData.pendingOrders !== 'number' ||
+            typeof statsData.completedOrders !== 'number') {
+            console.error("Invalid stats data format:", statsData);
+            throw new Error("Invalid stats data format received from server.");
+        }
+
+        setStats(statsData); // Set the fetched stats
+        console.log("DashboardPage Effect: Stats state updated.");
+
+      } catch (err) {
+        console.error("Dashboard fetch catch block:", err);
+        const errorMessage = err instanceof Error ? err.message : "An unexpected error occurred";
+        setError(errorMessage); // Set error state for display
+        toast.error(`Error loading dashboard stats: ${errorMessage}`); // Show toast notification
       } finally {
-        setLoading(false);
+        console.log("DashboardPage Effect: Setting loading to false.");
+        setLoading(false); // Stop loading regardless of success or failure
       }
     };
 
     fetchDashboardData();
-  }, [currentUser]);
 
-  const PlatformIcon = ({ platform }: { platform: string }) => {
-    switch (platform) {
-      case "instagram":
-        return <Instagram className="h-5 w-5 text-pink-500" />;
-      case "twitter":
-        return <Twitter className="h-5 w-5 text-blue-400" />;
-      case "youtube":
-        return <Youtube className="h-5 w-5 text-red-500" />;
-      default:
-        return null;
-    }
-  };
+  }, [currentUser]); // Dependency array is correct
 
+  // --- Conditional Rendering ---
+
+  // 1. Loading State
   if (loading) {
     return (
-      <div className="flex justify-center items-center h-64">
-        <div className="animate-spin rounded-full h-12 w-12 border-t-2 border-b-2 border-primary"></div>
+      <div className="flex justify-center items-center min-h-[300px]">
+        <Loader2 className="h-12 w-12 animate-spin text-primary" />
+        <span className="ml-3 text-muted-foreground">Loading Dashboard...</span>
       </div>
     );
   }
 
+  // 2. Error State
   if (error) {
     return (
-      <div className="text-center py-8">
-        <p className="text-red-500">{error}</p>
+      <div className="max-w-xl mx-auto text-center py-8 px-4">
+        <p className="text-red-600 dark:text-red-400 bg-red-100 dark:bg-red-900/30 p-4 rounded-md shadow border border-red-200 dark:border-red-800/50">
+            <strong>Error:</strong> {error}
+        </p>
+         {/* You could add a retry button here */}
+         {/* <Button onClick={() => window.location.reload()} className="mt-4">Retry</Button> */}
       </div>
     );
   }
 
+  // 3. No Stats Data (but no error and not loading) - Indicates successful fetch but empty/invalid data
+   if (!stats) {
+     return (
+       <div className="text-center py-8 text-muted-foreground">
+         Could not load dashboard statistics or no data available.
+       </div>
+     );
+   }
+
+  // 4. Success State - Render Dashboard
   return (
     <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
-      <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} className="space-y-8">
-        <div className="flex items-center justify-between">
+      <motion.div
+        initial={{ opacity: 0, y: 20 }}
+        animate={{ opacity: 1, y: 0 }}
+        transition={{ duration: 0.5 }}
+        className="space-y-8"
+      >
+        {/* Welcome Header */}
+        <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-2">
           <h1 className="text-3xl font-bold">Dashboard</h1>
-          <p className="text-muted-foreground">Welcome back, {currentUser?.email}</p>
+          <p className="text-muted-foreground text-sm sm:text-base">
+             Welcome back, {currentUser?.displayName || currentUser?.email || 'User'}
+          </p>
         </div>
 
-        {/* Stats Cards */}
+        {/* Stats Cards Grid */}
         <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-          <motion.div whileHover={{ scale: 1.02 }} className="bg-card p-6 rounded-lg shadow-lg">
-            <div className="flex items-center justify-between">
-              <DollarSign className="h-8 w-8 text-green-500" />
-              <span className="text-2xl font-bold">Ksh {stats.totalSales.toLocaleString()}</span>
+          {/* Active Orders Card */}
+          <motion.div
+            whileHover={{ scale: 1.03, y: -2 }}
+            transition={{ type: "spring", stiffness: 300, damping: 15 }}
+            className="bg-card p-6 rounded-lg shadow-lg border border-border"
+          >
+            <div className="flex items-center justify-between mb-2">
+               <p className="text-sm font-medium text-muted-foreground">Active Orders</p>
+               <Users className="h-6 w-6 text-blue-500" />
             </div>
-            <p className="mt-2 text-muted-foreground">Total Sales</p>
+            <p className="text-3xl font-bold">{stats.activeOrders}</p>
           </motion.div>
 
-          <motion.div whileHover={{ scale: 1.02 }} className="bg-card p-6 rounded-lg shadow-lg">
-            <div className="flex items-center justify-between">
-              <Users className="h-8 w-8 text-blue-500" />
-              <span className="text-2xl font-bold">{stats.activeListings}</span>
+          {/* Pending Orders Card */}
+          <motion.div
+             whileHover={{ scale: 1.03, y: -2 }}
+             transition={{ type: "spring", stiffness: 300, damping: 15 }}
+             className="bg-card p-6 rounded-lg shadow-lg border border-border"
+          >
+            <div className="flex items-center justify-between mb-2">
+               <p className="text-sm font-medium text-muted-foreground">Pending Orders</p>
+               <Activity className="h-6 w-6 text-purple-500" />
             </div>
-            <p className="mt-2 text-muted-foreground">Active Listings</p>
+            <p className="text-3xl font-bold">{stats.pendingOrders}</p>
           </motion.div>
 
-          <motion.div whileHover={{ scale: 1.02 }} className="bg-card p-6 rounded-lg shadow-lg">
-            <div className="flex items-center justify-between">
-              <Activity className="h-8 w-8 text-purple-500" />
-              <span className="text-2xl font-bold">{stats.pendingOrders}</span>
+          {/* Completed Orders Card */}
+          <motion.div
+             whileHover={{ scale: 1.03, y: -2 }}
+             transition={{ type: "spring", stiffness: 300, damping: 15 }}
+             className="bg-card p-6 rounded-lg shadow-lg border border-border"
+          >
+            <div className="flex items-center justify-between mb-2">
+               <p className="text-sm font-medium text-muted-foreground">Completed Orders</p>
+               <DollarSign className="h-6 w-6 text-green-500" />
             </div>
-            <p className="mt-2 text-muted-foreground">Pending Orders</p>
+            <p className="text-3xl font-bold">{stats.completedOrders}</p>
           </motion.div>
         </div>
 
-        <Tabs defaultValue="listings" className="w-full">
-          <TabsList>
-            <TabsTrigger value="listings">My Listings</TabsTrigger>
-            <TabsTrigger value="orders">Orders</TabsTrigger>
-          </TabsList>
-
-          <TabsContent value="listings" className="mt-6">
-            {listings.length === 0 ? (
-              <div className="text-center py-8 text-muted-foreground">
-                You don't have any listings yet
-              </div>
-            ) : (
-              <div className="grid gap-6">
-                {listings.map((listing) => (
-                  <motion.div 
-                    key={listing._id} 
-                    initial={{ opacity: 0 }} 
-                    animate={{ opacity: 1 }}
-                    className="bg-card p-6 rounded-lg shadow-lg flex items-center justify-between"
-                  >
-                    <div className="flex items-center space-x-4">
-                      <PlatformIcon platform={listing.platform} />
-                      <div>
-                        <h3 className="font-semibold capitalize">{listing.platform} Account</h3>
-                        <p className="text-sm text-muted-foreground">
-                          {listing.followers.toLocaleString()} followers • {listing.status}
-                        </p>
-                      </div>
-                    </div>
-                    <span className="text-lg font-semibold">Ksh {listing.price.toLocaleString()}</span>
-                  </motion.div>
-                ))}
-              </div>
-            )}
-          </TabsContent>
-        </Tabs>
       </motion.div>
     </div>
   );

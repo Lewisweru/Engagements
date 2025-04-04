@@ -10,8 +10,7 @@ import AuthPage from "./pages/AuthPage";
 import CartSidebar from "./components/CartSidebar";
 import { ThemeProvider } from "./components/ThemeProvider";
 import { AuthProvider } from "./contexts/AuthContext";
-import CreateListingPage from "./pages/CreateListingPage"; // ✅ Import the new page
-import PaymentSuccessPage from "./pages/PaymentSuccessPage"; // ✅ Import the success page
+import PaymentCallbackPage from "./pages/PaymentSuccessPage"; // ✅ Import the success page
 
 function App() {
   return (
