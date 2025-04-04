@@ -121,7 +121,7 @@ export default function EngagementPage() {
         currency: 'KES', // Or determine dynamically if needed
         description: `${quantity} ${selectedQuality} ${platformServices[selectedPlatform]?.find(s => s === selectedService) || selectedService} for ${selectedPlatform}`, // Generate descriptive text
         // Define the URL where user should return AFTER payment attempt on Pesapal
-        callbackUrl: `${window.location.origin}/dashboard`, // Replace with your actual callback route
+        callbackUrl: `${window.location.origin}/payment-success`, // Replace with your actual callback route
       };
 
       console.log("Sending order details to backend:", orderDetails);
