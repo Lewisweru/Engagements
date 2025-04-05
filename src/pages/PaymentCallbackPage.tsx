@@ -1,6 +1,4 @@
-// src/pages/PaymentCallbackPage.tsx (TypeScript Version - Corrected)
-
-import { useEffect, useState, useRef, useCallback } from 'react'; // React import often not needed with new JSX transform
+import { useEffect, useState, useRef, useCallback } from 'react';
 import { useSearchParams, Link } from 'react-router-dom'; // Keep Link
 import { motion } from "framer-motion";
 import { CheckCircle, XCircle, AlertTriangle, Loader2 } from "lucide-react";
@@ -8,16 +6,15 @@ import toast from "react-hot-toast";
 import { useAuth } from '@/contexts/AuthContext'; // Keep useAuth
 import { Button } from "@/components/ui/button"; // Keep Button
 
-// Define more specific status types reflecting your backend Order schema
+// Define status types matching your backend Order schema + UI states
 type OrderStatus = 'Pending Payment' | 'Payment Failed' | 'Processing' | 'Completed' | 'Cancelled' | 'Unknown';
-// Define the states the UI can be in
 type PageDisplayStatus = 'loading' | 'success' | 'failed' | 'pending' | 'unknown';
 
 // Define the expected structure of the successful data from your backend status endpoint
 interface BackendStatusResponse {
     status: OrderStatus;
     paymentStatus: string | null;
-    orderId: string;
+    orderId: string; // Keep this if you might display it later
     // Add other fields if your backend returns more
 }
 
@@ -32,192 +29,151 @@ export default function PaymentCallbackPage() {
   const { currentUser } = useAuth();
 
   // Get parameters from URL query string
-  const orderTrackingId = searchParams.get("OrderTrackingId");
+  // Prefix orderTrackingId with '_' since it's only used for logging now
+  const _orderTrackingId = searchParams.get("OrderTrackingId");
   const merchantReference = searchParams.get("OrderMerchantReference"); // Our pesapalOrderId
 
   // State for managing the UI display with explicit types
   const [displayStatus, setDisplayStatus] = useState<PageDisplayStatus>("loading");
   const [message, setMessage] = useState<string>("Verifying payment status...");
-  const [internalOrderId, setInternalOrderId] = useState<string | null>(null); // Store internal ID if needed
+  // Keep internalOrderId state if you might need it later, otherwise remove it and the setInternalOrderId call below
+  const [_internalOrderId, setInternalOrderId] = useState<string | null>(null);
 
   // --- Polling Logic ---
-  // Explicitly type interval ID or null. Requires @types/node (`npm install -D @types/node`)
-  const pollIntervalRef = useRef<NodeJS.Timeout | null>(null);
+  const pollIntervalRef = useRef<NodeJS.Timeout | null>(null); // Explicitly type interval ID or null
   const pollAttemptsRef = useRef<number>(0);
   const MAX_POLL_ATTEMPTS = 5; // How many times to check status
   const POLL_INTERVAL_MS = 4000; // Check every 4 seconds
   // --- End Polling Logic ---
 
   // Use useCallback to memoize the fetch function
-  // Ensures the function reference doesn't change on every render unless dependencies change
   const fetchOrderStatusFromBackend = useCallback(async (isPolling = false) => {
-    // Check for merchantReference inside callback as it's a dependency
     if (!merchantReference) {
-        if (!isPolling) { // Only show initial error if reference missing on first load
+        if (!isPolling) {
              console.error("Payment callback error: Missing OrderMerchantReference.");
              toast.error("Invalid payment callback URL.");
              setMessage("Could not verify payment: Invalid callback URL.");
              setDisplayStatus("failed");
-             if (pollIntervalRef.current) clearInterval(pollIntervalRef.current); // Clear interval on validation error
+             if (pollIntervalRef.current) clearInterval(pollIntervalRef.current);
         }
-        return; // Stop execution
+        return;
     }
 
-    // Set loading state only on initial fetch, not polls
     if(!isPolling) {
         setDisplayStatus("loading");
         setMessage("Verifying payment status...");
     }
-    console.log(`[Callback] ${isPolling ? 'Polling' : 'Fetching'} status for MerchantRef: ${merchantReference}`);
+    console.log(`[Callback] ${isPolling ? 'Polling' : 'Fetching'} status for MerchantRef: ${merchantReference}, TrackingId: ${_orderTrackingId}`); // Log the unused prefixed var
 
     try {
       let token: string | null = null; // Explicit type for token
-      // Get Firebase token if user exists (needed if status endpoint is protected)
       if (currentUser) {
         try { token = await currentUser.getIdToken(); }
-        catch (tokenError) { console.error("Callback: Error getting auth token", tokenError); }
+        catch (tokenError) { console.error("Callback: Error getting token", tokenError); }
       }
 
-      // Construct backend API URL
       const apiUrl = `${import.meta.env.VITE_BACKEND_URL}/api/orders/status-by-ref/${merchantReference}`;
-      // Explicitly type headers using HeadersInit
       const headers: HeadersInit = { 'Content-Type': 'application/json' };
-      if (token) { headers['Authorization'] = `Bearer ${token}`; } // Add auth header if token exists
+      if (token) { headers['Authorization'] = `Bearer ${token}`; }
 
-      // Make the GET request to your backend
       const response = await fetch(apiUrl, { method: 'GET', headers: headers });
       console.log("[Callback] Backend status response code:", response.status);
 
-      // Check if the backend request failed
       if (!response.ok) {
-        // Try to parse JSON error message from backend, provide default if parsing fails
         const errorData: FetchErrorResponse = await response.json().catch(() => ({ message: `Request failed (${response.status})` }));
         throw new Error(errorData.message || `Failed to fetch status`);
       }
 
-      // Parse successful JSON response, expecting BackendStatusResponse structure
       const data: BackendStatusResponse = await response.json();
       console.log("[Callback] Backend status data received:", data);
-      setInternalOrderId(data.orderId); // Store internal order ID if needed
+      setInternalOrderId(data.orderId); // Set the state (warning resolved if internalOrderId is used later)
 
-      // Process the status received from *your* database
-      let currentDisplayStatus: PageDisplayStatus = displayStatus; // Variable to hold the next display state
+      let currentDisplayStatus: PageDisplayStatus = displayStatus;
 
-      switch (data.status) { // Switch based on your internal DB status
-        case 'Processing': // Treat Processing as a success for the user here
+      switch (data.status) {
+        case 'Processing':
         case 'Completed':
           currentDisplayStatus = "success";
           setMessage('Payment successful! Your order is being processed.');
-          if (!isPolling) toast.success("Payment verified!"); // Show toast only on first success
-          if (pollIntervalRef.current) clearInterval(pollIntervalRef.current); // Stop polling
+          if (!isPolling) toast.success("Payment verified!");
+          if (pollIntervalRef.current) clearInterval(pollIntervalRef.current);
           break;
-
         case 'Payment Failed':
         case 'Cancelled':
           currentDisplayStatus = "failed";
-          setMessage(`Payment ${data.paymentStatus?.toLowerCase() || 'failed/cancelled'}. Please try again or contact support.`);
+          setMessage(`Payment ${data.paymentStatus?.toLowerCase() || 'failed/cancelled'}.`);
           if (!isPolling) toast.error("Payment verification indicated failure.");
-          if (pollIntervalRef.current) clearInterval(pollIntervalRef.current); // Stop polling
+          if (pollIntervalRef.current) clearInterval(pollIntervalRef.current);
           break;
-
         case 'Pending Payment':
-        default: // Includes 'Unknown' or other unexpected statuses from your DB
+        default:
           if (isPolling) {
-              // If still pending during a poll check
                pollAttemptsRef.current += 1;
                console.log(`[Callback] Status still '${data.status}'. Poll attempt ${pollAttemptsRef.current}/${MAX_POLL_ATTEMPTS}.`);
                if (pollAttemptsRef.current >= MAX_POLL_ATTEMPTS) {
-                   // Stop polling after max attempts
-                   console.log("[Callback] Max poll attempts reached. Setting status to pending.");
-                   currentDisplayStatus = "pending"; // Show final pending state
-                   setMessage('Payment verification is taking longer than expected. Please check your dashboard shortly or contact support.');
+                   console.log("[Callback] Max poll attempts reached.");
+                   currentDisplayStatus = "pending";
+                   setMessage('Payment verification is taking longer than expected. Please check your dashboard shortly.');
                    if (pollIntervalRef.current) clearInterval(pollIntervalRef.current);
                } else {
-                   // Continue polling - keep UI in loading state
                    currentDisplayStatus = "loading";
                    setMessage("Waiting for final confirmation...");
                }
           } else {
-              // If initial fetch result is pending, start polling
               console.log("[Callback] Initial status is Pending Payment. Starting polling...");
-              currentDisplayStatus = "loading"; // Show loading while polling starts
+              currentDisplayStatus = "loading";
               setMessage("Waiting for final confirmation...");
-              pollAttemptsRef.current = 1; // Start attempt count
-              // Prevent multiple intervals if effect runs again quickly
+              pollAttemptsRef.current = 1;
               if (!pollIntervalRef.current) {
                   pollIntervalRef.current = setInterval(() => fetchOrderStatusFromBackend(true), POLL_INTERVAL_MS);
               }
           }
           break;
       }
-      // Update the display status state
-      setDisplayStatus(currentDisplayStatus);
+       if (displayStatus !== currentDisplayStatus || displayStatus === 'loading') {
+           setDisplayStatus(currentDisplayStatus);
+       }
 
-    } catch (error: unknown) { // Catch block: Type error as unknown
-      // Type guard to safely access error properties
-      let errorMessage = "An unknown error occurred while verifying status";
-      if (error instanceof Error) {
-          errorMessage = error.message; // Use message property if it's an Error instance
-      } else if (typeof error === 'string') {
-           errorMessage = error; // Use error directly if it's a string
-      }
-      console.error("Error in fetchOrderStatusFromBackend:", errorMessage);
-      setMessage(`Error verifying payment status: ${errorMessage}`);
-      if (!isPolling) toast.error("Could not verify payment status."); // Show toast only on initial fetch error
-      setDisplayStatus("unknown"); // Set to unknown/error state
-      if (pollIntervalRef.current) clearInterval(pollIntervalRef.current); // Stop polling on any error
+    } catch (error: unknown) {
+        let errorMessage = "An unknown error occurred";
+        if (error instanceof Error) errorMessage = error.message;
+        else if (typeof error === 'string') errorMessage = error;
+        console.error("Error in fetchOrderStatusFromBackend:", errorMessage);
+        setMessage(`Error verifying payment status: ${errorMessage}`);
+        if (!isPolling) toast.error("Could not verify payment status.");
+        setDisplayStatus("unknown");
+        if (pollIntervalRef.current) clearInterval(pollIntervalRef.current);
     }
-  }, [merchantReference, currentUser, displayStatus]); // Dependencies for useCallback
+  // Add _orderTrackingId to dependency array because it's used in console.log inside
+  }, [merchantReference, currentUser, displayStatus, _orderTrackingId]);
 
 
   // Effect to run the initial fetch (after a delay)
   useEffect(() => {
-    // Only run if merchantReference is available
-    if (!merchantReference) {
-        console.log("Callback Effect: No merchant reference, skipping fetch.");
-        return;
-    }
-
-    // Delay the *first* fetch call slightly
-    const initialTimerId = setTimeout(() => {
-        fetchOrderStatusFromBackend(false); // false indicates it's the initial call, not a poll
-    }, 1500); // Initial delay (e.g., 1.5 seconds)
-
-    // Cleanup function: clear timeout and interval when component unmounts or dependencies change
+    if (!merchantReference) return;
+    const initialTimerId = setTimeout(() => { fetchOrderStatusFromBackend(false); }, 1500);
     return () => {
         clearTimeout(initialTimerId);
-        if (pollIntervalRef.current) {
-            clearInterval(pollIntervalRef.current);
-            pollIntervalRef.current = null; // Reset ref
-        }
-        pollAttemptsRef.current = 0; // Reset attempts count
+        if (pollIntervalRef.current) { clearInterval(pollIntervalRef.current); pollIntervalRef.current = null; }
+        pollAttemptsRef.current = 0;
     };
-    // This effect depends on fetchOrderStatusFromBackend (memoized) and merchantReference
-  }, [fetchOrderStatusFromBackend, merchantReference]);
+  }, [fetchOrderStatusFromBackend, merchantReference]); // fetchOrderStatusFromBackend is memoized
 
 
   // --- Render Content Function ---
-  // Determines what UI to show based on the displayStatus state
-  // Add explicit return type React.ReactNode
   const renderContent = (): React.ReactNode => {
     switch (displayStatus) {
-      case 'loading': // Covers initial load and subsequent polling intervals
+      case 'loading':
+      case 'pending':
         return (
           <>
             <Loader2 className="w-16 h-16 text-primary animate-spin mx-auto mb-4" />
-            <h1 className="text-2xl font-semibold mt-6">Verifying Payment...</h1>
+            <h1 className="text-2xl font-semibold mt-6">
+              {displayStatus === 'loading' ? 'Verifying Payment...' : 'Verification Pending...'}
+            </h1>
             <p className="text-muted-foreground mt-2">{message}</p>
-          </>
-        );
-      case 'pending': // Shown after polling times out and status is still pending
-        return (
-          <>
-            <motion.div initial={{ scale: 0 }} animate={{ scale: 1 }} transition={{ type: 'spring', stiffness: 300, damping: 15 }}>
-                 <AlertTriangle className="w-16 h-16 text-yellow-500 mx-auto" />
-            </motion.div>
-            <h1 className="text-3xl font-bold mt-6 text-yellow-500">Verification Pending</h1>
-            <p className="text-muted-foreground mt-2 mb-6">{message}</p>
-            <Link to="/dashboard"><Button size="lg" variant="outline">Check Dashboard</Button></Link>
+            {/* Optional: Display internalOrderId if needed for user reference */}
+            {/* {internalOrderId && displayStatus === 'pending' && <p className='text-xs mt-4 text-muted-foreground'>Order Ref: {internalOrderId}</p>} */}
           </>
         );
       case 'success':
@@ -228,6 +184,8 @@ export default function PaymentCallbackPage() {
             </motion.div>
             <h1 className="text-3xl font-bold mt-6 text-green-500">Payment Successful!</h1>
             <p className="text-muted-foreground mt-2 mb-6">{message}</p>
+            {/* Optional: Display internalOrderId */}
+            {/* {internalOrderId && <p className='text-xs mb-4 text-muted-foreground'>Order Ref: {internalOrderId}</p>} */}
             <Link to="/dashboard">
               <Button size="lg" className="bg-green-600 hover:bg-green-700">Go to Dashboard</Button>
             </Link>
@@ -241,6 +199,8 @@ export default function PaymentCallbackPage() {
             </motion.div>
             <h1 className="text-3xl font-bold mt-6 text-red-500">Payment Failed</h1>
             <p className="text-muted-foreground mt-2 mb-6">{message}</p>
+             {/* Optional: Display internalOrderId */}
+            {/* {internalOrderId && <p className='text-xs mb-4 text-muted-foreground'>Order Ref: {internalOrderId}</p>} */}
             <Link to="/engagement">
               <Button size="lg" variant="destructive" className="bg-red-600 hover:bg-red-700">
                 Try Again
@@ -248,7 +208,7 @@ export default function PaymentCallbackPage() {
             </Link>
           </>
         );
-      case 'unknown': // State for when fetch fails completely
+      case 'unknown':
       default:
         return (
           <>
@@ -257,6 +217,8 @@ export default function PaymentCallbackPage() {
             </motion.div>
             <h1 className="text-3xl font-bold mt-6 text-yellow-500">Status Check Error</h1>
             <p className="text-muted-foreground mt-2 mb-6">{message}</p>
+             {/* Optional: Display internalOrderId */}
+            {/* {internalOrderId && <p className='text-xs mb-4 text-muted-foreground'>Order Ref: {internalOrderId}</p>} */}
             <Link to="/dashboard">
               <Button size="lg" variant="outline">Check Dashboard</Button>
             </Link>
@@ -265,6 +227,7 @@ export default function PaymentCallbackPage() {
     }
   };
   // --- End renderContent function ---
+
 
   // --- Main Component Return ---
   return (
@@ -275,7 +238,6 @@ export default function PaymentCallbackPage() {
         transition={{ duration: 0.5 }}
         className="max-w-lg w-full bg-background/80 dark:bg-gray-900/80 backdrop-blur-md rounded-lg shadow-lg p-8 text-center border border-border"
       >
-        {/* Call the function to render the appropriate UI */}
         {renderContent()}
       </motion.div>
     </div>
