@@ -7,6 +7,7 @@ import DashboardPage from "./pages/DashboardPage";
 import MarketplacePage from "./pages/MarketplacePage";
 import EngagementPage from "./pages/EngagementPage";
 import AuthPage from "./pages/AuthPage";
+import AdminDashboardPage from './pages/AdminDashboardPage';
 import { ThemeProvider } from "./components/ThemeProvider";
 import { AuthProvider } from "./contexts/AuthContext";
 import PaymentCallbackPage from "./pages/PaymentCallbackPage"; // ✅ Import the success page
@@ -26,6 +27,7 @@ function App() {
                 <Route path="/engagement" element={<EngagementPage />} />
                 <Route path="/auth" element={<AuthPage />} />
                 <Route path="/payment-success" element={<PaymentCallbackPage />} /> {/* ✅ New Route */}
+                <Route path="/admin/dashboard" element={<AdminDashboardPage />} />
               </Routes>
             </main>
             <Footer />
