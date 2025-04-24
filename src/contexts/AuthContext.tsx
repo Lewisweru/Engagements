@@ -1,4 +1,4 @@
-import { createContext, useContext, useEffect, useState, ReactNode } from "react";
+import { createContext, useContext, useEffect, useState, ReactNode, useCallback, useMemo } from 'react';
 import {
   User,
   UserCredential,
@@ -12,155 +12,179 @@ import {
   signInWithPopup,
   setPersistence,
   browserLocalPersistence,
-} from "firebase/auth";
-import { auth } from "@/lib/firebase";
-import { toast } from "react-hot-toast";
+  Auth
+} from 'firebase/auth';
+import { auth as firebaseAuth } from '@/lib/firebase';
+import { toast } from 'react-hot-toast';
 
 interface AuthContextType {
   currentUser: User | null;
-  signup: (email: string, password: string, username: string, country: string) => Promise<void>;
+  loading: boolean;
+  signup: (email: string, password: string, username: string) => Promise<UserCredential>;
   login: (email: string, password: string) => Promise<UserCredential>;
   logout: () => Promise<void>;
   resetPassword: (email: string) => Promise<void>;
-  updateUserProfile: (displayName: string) => Promise<void>;
-  googleSignIn: () => Promise<void>;
-  loading: boolean;
+  updateUserProfile: (displayName: string, photoURL?: string) => Promise<void>;
+  googleSignIn: () => Promise<UserCredential>;
+  getIdToken: (forceRefresh?: boolean) => Promise<string>;
 }
 
 const AuthContext = createContext<AuthContextType | null>(null);
 
-export function useAuth() {
+export const useAuth = () => {
   const context = useContext(AuthContext);
   if (!context) {
-    throw new Error("useAuth must be used within an AuthProvider");
+    throw new Error('useAuth must be used within an AuthProvider');
   }
   return context;
-}
+};
 
 interface AuthProviderProps {
   children: ReactNode;
+  auth?: Auth; // Allow custom auth instance for testing
 }
 
-export function AuthProvider({ children }: AuthProviderProps) {
+export function AuthProvider({ children, auth = firebaseAuth }: AuthProviderProps) {
   const [currentUser, setCurrentUser] = useState<User | null>(null);
   const [loading, setLoading] = useState(true);
 
-  // Set auth persistence to local
+  // Set auth persistence and initialize auth state listener
   useEffect(() => {
     const initializeAuth = async () => {
       try {
+        // Set persistence to LOCAL for persistent sessions
         await setPersistence(auth, browserLocalPersistence);
-      } catch (error) {
-        console.error("Error setting auth persistence:", error);
+        
+        const unsubscribe = onAuthStateChanged(auth, async (user) => {
+          if (user) {
+            // Force token refresh to ensure validity
+            const token = await user.getIdToken(true);
+            console.debug('Auth state changed - User logged in with token:', token);
+          }
+          setCurrentUser(user);
+          setLoading(false);
+        });
+
+        return unsubscribe;
+      } catch (err) {
+        console.error('Auth initialization error:', err);
+        setLoading(false);
       }
     };
+
     initializeAuth();
-  }, []);
+  }, [auth]);
 
-  // Auth state listener
-  useEffect(() => {
-    const unsubscribe = onAuthStateChanged(auth, (user) => {
-      setCurrentUser(user);
-      setLoading(false);
-      
-      // Set up token refresh if user exists
-      if (user) {
-        const refreshInterval = setInterval(async () => {
-          try {
-            await user.getIdToken(true);
-          } catch (error) {
-            console.error("Token refresh failed:", error);
-          }
-        }, 55 * 60 * 1000); // Refresh every 55 minutes
-        
-        return () => clearInterval(refreshInterval);
-      }
-    });
-
-    return unsubscribe;
-  }, []);
-
-  async function signup(email: string, password: string, username: string, country: string): Promise<void> {
+  const signup = useCallback(async (email: string, password: string, username: string) => {
     try {
+      await setPersistence(auth, browserLocalPersistence);
       const userCredential = await createUserWithEmailAndPassword(auth, email, password);
       await updateProfile(userCredential.user, { displayName: username });
-      
-      // Backend sync would happen here
-      toast.success("Account created successfully!");
+      return userCredential;
     } catch (error: any) {
-      console.error("Signup error:", error);
-      toast.error(error.message || "Failed to create account");
+      console.error('Signup error:', error);
+      toast.error(error.message || 'Failed to create account');
       throw error;
     }
-  }
+  }, [auth]);
 
-  async function login(email: string, password: string): Promise<UserCredential> {
+  const login = useCallback(async (email: string, password: string) => {
     try {
+      await setPersistence(auth, browserLocalPersistence);
       return await signInWithEmailAndPassword(auth, email, password);
     } catch (error: any) {
-      console.error("Login error:", error);
-      toast.error(error.message || "Failed to login");
+      console.error('Login error:', error);
+      toast.error(error.message || 'Failed to login');
       throw error;
     }
-  }
+  }, [auth]);
 
-  async function logout(): Promise<void> {
+  const logout = useCallback(async () => {
     try {
       await signOut(auth);
-      toast.success("Logged out successfully");
     } catch (error: any) {
-      console.error("Logout error:", error);
-      toast.error(error.message || "Failed to logout");
-    }
-  }
-
-  async function resetPassword(email: string): Promise<void> {
-    try {
-      await sendPasswordResetEmail(auth, email);
-      toast.success("Password reset email sent!");
-    } catch (error: any) {
-      console.error("Password reset error:", error);
-      toast.error(error.message || "Failed to send reset email");
-    }
-  }
-
-  async function updateUserProfile(displayName: string): Promise<void> {
-    if (!auth.currentUser) {
-      throw new Error("No user logged in");
-    }
-    
-    try {
-      await updateProfile(auth.currentUser, { displayName });
-      setCurrentUser({ ...auth.currentUser });
-      toast.success("Profile updated!");
-    } catch (error: any) {
-      console.error("Profile update error:", error);
-      toast.error(error.message || "Failed to update profile");
+      console.error('Logout error:', error);
+      toast.error(error.message || 'Failed to logout');
       throw error;
     }
-  }
+  }, [auth]);
 
-  async function googleSignIn(): Promise<void> {
+  const resetPassword = useCallback(async (email: string) => {
     try {
-      const provider = new GoogleAuthProvider();
-      await signInWithPopup(auth, provider);
-      toast.success("Logged in with Google!");
+      await sendPasswordResetEmail(auth, email);
+      toast.success('Password reset email sent!');
     } catch (error: any) {
-      console.error("Google sign-in error:", error);
-      toast.error(error.message || "Failed to login with Google");
+      console.error('Password reset error:', error);
+      toast.error(error.message || 'Failed to send reset email');
+      throw error;
     }
-  }
+  }, [auth]);
 
-  const value: AuthContextType = {
+  const updateUserProfile = useCallback(async (displayName: string, photoURL?: string) => {
+    if (!auth.currentUser) {
+      throw new Error('No user is currently logged in');
+    }
+
+    try {
+      await updateProfile(auth.currentUser, { displayName, photoURL });
+      setCurrentUser({ ...auth.currentUser });
+      toast.success('Profile updated!');
+    } catch (error: any) {
+      console.error('Profile update error:', error);
+      toast.error(error.message || 'Failed to update profile');
+      throw error;
+    }
+  }, [auth]);
+
+  const googleSignIn = useCallback(async () => {
+    try {
+      await setPersistence(auth, browserLocalPersistence);
+      const provider = new GoogleAuthProvider();
+      const result = await signInWithPopup(auth, provider);
+      
+      // Force token refresh after sign-in
+      await result.user.getIdToken(true);
+      return result;
+    } catch (error: any) {
+      console.error('Google sign-in error:', error);
+      if (error.code === 'auth/popup-closed-by-user') {
+        toast.error('Sign in popup was closed');
+      } else {
+        toast.error(error.message || 'Failed to sign in with Google');
+      }
+      throw error;
+    }
+  }, [auth]);
+
+  const getIdToken = useCallback(async (forceRefresh = false) => {
+    if (!auth.currentUser) {
+      throw new Error('No user is currently logged in');
+    }
+    return auth.currentUser.getIdToken(forceRefresh);
+  }, [auth]);
+
+  // Memoize context value to prevent unnecessary re-renders
+  const value = useMemo(() => ({
     currentUser,
+    loading,
     signup,
     login,
     logout,
     resetPassword,
     updateUserProfile,
     googleSignIn,
+    getIdToken
+  }), [
+    currentUser,
     loading,
-  };
+    signup,
+    login,
+    logout,
+    resetPassword,
+    updateUserProfile,
+    googleSignIn,
+    getIdToken
+  ]);
 
   return (
     <AuthContext.Provider value={value}>
