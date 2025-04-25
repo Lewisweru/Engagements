@@ -20,7 +20,7 @@ type PlatformId = "tiktok" | "instagram" | "facebook" | "youtube" | "telegram" |
 type Quality = "standard" | "high";
 type PricingStructure = Record<PlatformId, Record<Quality, Record<string, number>>>;
 const PRICING: PricingStructure = { /* ... your pricing ... */
-  tiktok:    { standard: { followers: 0.50, likes: 0.05, views: 0.004 },         high: { followers: 0.55, likes: 0.07, views: 0.005 } },
+  tiktok:    { standard: { followers: 0.50, likes: 0.07, views: 0.004 },         high: { followers: 0.55, likes: 0.09, views: 0.005 } },
   instagram: { standard: { followers: 0.50, likes: 0.06, views: 0.01 },          high: { followers: 0.55, likes: 0.08, views: 0.02 } },
   facebook:  { standard: { pagelikes: 2.10, profilefollowers: 1.40, postlikes: 1.10, views: 0.06 }, high: { pagelikes: 2.20, profilefollowers: 1.44, postlikes: 1.13, views: 0.11 } },
   youtube:   { standard: { subscribers: 4.50, likes: 0.30, views: 1.20 },        high: { subscribers: 5.60, likes: 1.25, views: 1.45 } },
