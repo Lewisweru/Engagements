@@ -1,4 +1,4 @@
-// --- START OF FILE Engagements/src/contexts/AuthContext.tsx --- (Corrected loadingAppUser)
+// --- START OF FILE Engagements/src/contexts/AuthContext.tsx --- (Timeout Increased)
 import { createContext, useContext, useEffect, useState, ReactNode, useCallback, useMemo } from 'react';
 import {
   User as FirebaseUser,
@@ -17,8 +17,9 @@ import {
 } from 'firebase/auth';
 import { auth as firebaseAuth } from '@/lib/firebase';
 import { toast } from 'react-hot-toast';
-import axios from 'axios';
+import axios from 'axios'; // Import axios for backend calls
 
+// Define a type for the user object returned by your backend /api/auth/current-user
 interface AppUser {
     _id: string;
     firebaseUid: string;
@@ -29,6 +30,7 @@ interface AppUser {
     country?: string;
     role: 'user' | 'admin';
     createdAt: string;
+    // Add other relevant fields from your backend user model
 }
 
 interface AuthContextType {
@@ -43,7 +45,7 @@ interface AuthContextType {
   updateUserProfile: (displayName: string, photoURL?: string) => Promise<void>;
   googleSignIn: (country?: string) => Promise<UserCredential>;
   getIdToken: (forceRefresh?: boolean) => Promise<string | null>;
-  syncUserWithBackend: (user: FirebaseUser, country?: string, name?: string, profilePic?: string) => Promise<AppUser | null>;
+  syncUserWithBackend: (user: FirebaseUser, country?: string, name?: string, profilePic?: string) => Promise<AppUser | null>; // Return synced user or null
 }
 
 const AuthContext = createContext<AuthContextType | null>(null);
@@ -56,11 +58,15 @@ export const useAuth = () => {
   return context;
 };
 
+// --- Axios Instance for API Calls ---
+// Export this instance so components can import and use it directly
 export const apiClient = axios.create({
-  baseURL: `${import.meta.env.VITE_BACKEND_URL || ''}/api`,
-  timeout: 10000,
+  baseURL: `${import.meta.env.VITE_BACKEND_URL || ''}/api`, // Correct base URL including /api
+  // *** INCREASED TIMEOUT HERE ***
+  timeout: 30000, // Increased to 30 seconds (30000ms)
 });
 
+// Axios Request Interceptor to add Firebase ID Token
 apiClient.interceptors.request.use(async (config) => {
   const user = firebaseAuth.currentUser;
   if (user) {
@@ -77,6 +83,7 @@ apiClient.interceptors.request.use(async (config) => {
   return Promise.reject(error);
 });
 
+// --- Auth Provider Component ---
 interface AuthProviderProps {
   children: ReactNode;
   authInstance?: Auth;
@@ -86,16 +93,16 @@ export function AuthProvider({ children, authInstance = firebaseAuth }: AuthProv
   const [currentUser, setCurrentUser] = useState<FirebaseUser | null>(null);
   const [appUser, setAppUser] = useState<AppUser | null>(null);
   const [loading, setLoading] = useState(true);
-  const [loadingAppUser, setLoadingAppUser] = useState(true);
+  const [loadingAppUser, setLoadingAppUser] = useState(true); // Start true until first sync attempt
 
+  // --- Function to Sync Firebase User with Backend ---
   const syncUserWithBackend = useCallback(async (user: FirebaseUser | null, country?: string, name?: string, profilePic?: string): Promise<AppUser | null> => {
     if (!user) {
       console.log('[Sync Backend] No user to sync.');
       setAppUser(null);
-      setLoadingAppUser(false); // Set false on explicit logout/no user
+      setLoadingAppUser(false);
       return null;
     }
-    // Set loading true before the try block
     setLoadingAppUser(true);
     console.log(`[Sync Backend] Attempting sync for UID: ${user.uid}`);
     try {
@@ -116,30 +123,32 @@ export function AuthProvider({ children, authInstance = firebaseAuth }: AuthProv
       if (response.data.success && response.data.user) {
         setAppUser(response.data.user);
         console.log(`[Sync Backend] Sync successful for user: ${response.data.user.username}`);
-        // setLoadingAppUser(false); // Moved to finally
         return response.data.user;
       } else {
         throw new Error(response.data.message || 'Backend sync failed');
       }
     } catch (error: any) {
       console.error('[Sync Backend] Error syncing user with backend:', error);
-      const backendErrorMessage = error.response?.data?.error?.message || error.response?.data?.message || error.message;
-      toast.error(`Account sync failed: ${backendErrorMessage || 'Network Error or Server Issue'}`);
+      let errorMessage = 'Network Error or Server Issue';
+      if (error.code === 'ECONNABORTED' && error.message.includes('timeout')) {
+          errorMessage = `Sync timed out (${(apiClient.defaults.timeout || 0)/1000}s). Please try refreshing. If the issue persists, contact support.`;
+      } else {
+          errorMessage = error.response?.data?.error?.message || error.response?.data?.message || error.message || errorMessage;
+      }
+      toast.error(`Account sync failed: ${errorMessage}`);
       setAppUser(null);
-      // setLoadingAppUser(false); // Moved to finally
       return null;
     } finally {
-      // *** ENSURE loading is set to false regardless of success or failure ***
       setLoadingAppUser(false);
       console.log('[Sync Backend] setLoadingAppUser(false) called in finally block.');
     }
   }, []);
 
+  // --- Firebase Auth State Listener ---
   useEffect(() => {
     console.log('[AuthProvider] Setting up Firebase Auth listener...');
     setLoading(true);
     setLoadingAppUser(true);
-
     const unsubscribe = onAuthStateChanged(authInstance, async (user) => {
       console.log('[AuthProvider] onAuthStateChanged. User:', user ? user.uid : 'null');
       setCurrentUser(user);
@@ -147,30 +156,27 @@ export function AuthProvider({ children, authInstance = firebaseAuth }: AuthProv
         await syncUserWithBackend(user, undefined, user.displayName || undefined, user.photoURL || undefined);
       } else {
         setAppUser(null);
-        setLoadingAppUser(false);
+        setLoadingAppUser(false); // Ensure loading stops on logout
       }
       setLoading(false);
     });
-
     return () => {
-        console.log('[AuthProvider] Cleaning up Firebase Auth listener.');
-        unsubscribe();
+      console.log('[AuthProvider] Cleaning up Firebase Auth listener.');
+      unsubscribe();
     }
   }, [authInstance, syncUserWithBackend]);
 
-  const signup = useCallback(async (email: string, password: string, username: string, country: string) => {
+  // --- Auth Actions ---
+   const signup = useCallback(async (email: string, password: string, username: string, country: string) => {
     try {
       await setPersistence(authInstance, browserLocalPersistence);
       const userCredential = await createUserWithEmailAndPassword(authInstance, email, password);
       toast.success(`Account created for ${email}.`);
       const firebaseUser = userCredential.user;
-
       await updateProfile(firebaseUser, { displayName: username });
       setCurrentUser({ ...firebaseUser, displayName: username } as FirebaseUser);
       toast.success(`Profile name set to ${username}. Syncing...`);
-
       await syncUserWithBackend(firebaseUser, country, username);
-
       return userCredential;
     } catch (error: any) {
       console.error('Signup error:', error);
@@ -251,11 +257,8 @@ export function AuthProvider({ children, authInstance = firebaseAuth }: AuthProv
     } catch (error: any) {
       console.error('Google sign-in error:', error);
       let message = error.message?.replace('Firebase: ', '') || 'Failed to sign in with Google.';
-      if (error.code === 'auth/popup-closed-by-user') {
-        message = 'Sign in popup was closed.';
-      } else if (error.code === 'auth/account-exists-with-different-credential') {
-          message = 'An account already exists with this email using a different sign-in method.';
-      }
+      if (error.code === 'auth/popup-closed-by-user') message = 'Sign in popup was closed.';
+      else if (error.code === 'auth/account-exists-with-different-credential') message = 'An account already exists with this email using a different sign-in method.';
       toast.error(`Google Sign-In failed: ${message}`);
       throw error;
     }
