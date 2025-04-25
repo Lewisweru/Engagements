@@ -1,4 +1,4 @@
-// contexts/AuthContext.tsx (Corrected apiClient baseURL)
+// --- START OF FILE Engagements/src/contexts/AuthContext.tsx --- (Corrected loadingAppUser)
 import { createContext, useContext, useEffect, useState, ReactNode, useCallback, useMemo } from 'react';
 import {
   User as FirebaseUser,
@@ -17,9 +17,8 @@ import {
 } from 'firebase/auth';
 import { auth as firebaseAuth } from '@/lib/firebase';
 import { toast } from 'react-hot-toast';
-import axios from 'axios'; // Import axios for backend calls
+import axios from 'axios';
 
-// Define a type for the user object returned by your backend /api/auth/current-user
 interface AppUser {
     _id: string;
     firebaseUid: string;
@@ -57,14 +56,11 @@ export const useAuth = () => {
   return context;
 };
 
-// --- Axios Instance for API Calls ---
 export const apiClient = axios.create({
-  // *** THE FIX IS HERE ***
-  baseURL: `${import.meta.env.VITE_BACKEND_URL || ''}/api`, // Append /api
+  baseURL: `${import.meta.env.VITE_BACKEND_URL || ''}/api`,
   timeout: 10000,
 });
 
-// Axios Request Interceptor to add Firebase ID Token
 apiClient.interceptors.request.use(async (config) => {
   const user = firebaseAuth.currentUser;
   if (user) {
@@ -81,7 +77,6 @@ apiClient.interceptors.request.use(async (config) => {
   return Promise.reject(error);
 });
 
-// --- Auth Provider Component ---
 interface AuthProviderProps {
   children: ReactNode;
   authInstance?: Auth;
@@ -93,14 +88,14 @@ export function AuthProvider({ children, authInstance = firebaseAuth }: AuthProv
   const [loading, setLoading] = useState(true);
   const [loadingAppUser, setLoadingAppUser] = useState(true);
 
-  // --- Function to Sync Firebase User with Backend ---
   const syncUserWithBackend = useCallback(async (user: FirebaseUser | null, country?: string, name?: string, profilePic?: string): Promise<AppUser | null> => {
     if (!user) {
       console.log('[Sync Backend] No user to sync.');
       setAppUser(null);
-      setLoadingAppUser(false);
+      setLoadingAppUser(false); // Set false on explicit logout/no user
       return null;
     }
+    // Set loading true before the try block
     setLoadingAppUser(true);
     console.log(`[Sync Backend] Attempting sync for UID: ${user.uid}`);
     try {
@@ -112,16 +107,16 @@ export function AuthProvider({ children, authInstance = firebaseAuth }: AuthProv
              ...( country && { country: country })
         };
         console.log("[Sync Backend] Sending payload:", syncPayload);
-        // *** This path is now RELATIVE to the baseURL which includes /api ***
+
         const response = await apiClient.post<{ success: boolean; user: AppUser; message: string }>(
-             '/auth/sync-firebase-user', // Correct relative path
+             '/auth/sync-firebase-user',
              syncPayload
          );
 
       if (response.data.success && response.data.user) {
         setAppUser(response.data.user);
         console.log(`[Sync Backend] Sync successful for user: ${response.data.user.username}`);
-        setLoadingAppUser(false);
+        // setLoadingAppUser(false); // Moved to finally
         return response.data.user;
       } else {
         throw new Error(response.data.message || 'Backend sync failed');
@@ -129,14 +124,17 @@ export function AuthProvider({ children, authInstance = firebaseAuth }: AuthProv
     } catch (error: any) {
       console.error('[Sync Backend] Error syncing user with backend:', error);
       const backendErrorMessage = error.response?.data?.error?.message || error.response?.data?.message || error.message;
-      toast.error(`Account sync failed: ${backendErrorMessage || 'Unknown error'}`);
+      toast.error(`Account sync failed: ${backendErrorMessage || 'Network Error or Server Issue'}`);
       setAppUser(null);
-      setLoadingAppUser(false);
+      // setLoadingAppUser(false); // Moved to finally
       return null;
+    } finally {
+      // *** ENSURE loading is set to false regardless of success or failure ***
+      setLoadingAppUser(false);
+      console.log('[Sync Backend] setLoadingAppUser(false) called in finally block.');
     }
   }, []);
 
-  // --- Firebase Auth State Listener ---
   useEffect(() => {
     console.log('[AuthProvider] Setting up Firebase Auth listener...');
     setLoading(true);
@@ -160,8 +158,7 @@ export function AuthProvider({ children, authInstance = firebaseAuth }: AuthProv
     }
   }, [authInstance, syncUserWithBackend]);
 
-  // --- Auth Actions ---
-   const signup = useCallback(async (email: string, password: string, username: string, country: string) => {
+  const signup = useCallback(async (email: string, password: string, username: string, country: string) => {
     try {
       await setPersistence(authInstance, browserLocalPersistence);
       const userCredential = await createUserWithEmailAndPassword(authInstance, email, password);
@@ -257,7 +254,7 @@ export function AuthProvider({ children, authInstance = firebaseAuth }: AuthProv
       if (error.code === 'auth/popup-closed-by-user') {
         message = 'Sign in popup was closed.';
       } else if (error.code === 'auth/account-exists-with-different-credential') {
-          message = 'An account already exists with this email address using a different sign-in method.';
+          message = 'An account already exists with this email using a different sign-in method.';
       }
       toast.error(`Google Sign-In failed: ${message}`);
       throw error;
@@ -279,7 +276,6 @@ export function AuthProvider({ children, authInstance = firebaseAuth }: AuthProv
     }
   }, [authInstance]);
 
-  // Memoize context value
   const value = useMemo(() => ({
     currentUser, appUser, loading, loadingAppUser,
     signup, login, logout, resetPassword, updateUserProfile, googleSignIn, getIdToken, syncUserWithBackend
