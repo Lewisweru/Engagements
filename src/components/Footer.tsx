@@ -1,5 +1,4 @@
 import { Link } from 'react-router-dom';
-import { Instagram, Twitter, Facebook, Youtube } from 'lucide-react';
 
 export default function Footer() {
   return (
@@ -15,11 +14,6 @@ export default function Footer() {
           <div>
             <h3 className="text-lg font-semibold mb-4">Quick Links</h3>
             <ul className="space-y-2">
-              <li>
-                <Link to="/marketplace" className="text-sm text-muted-foreground hover:text-foreground">
-                  Browse Marketplace
-                </Link>
-              </li>
               <li>
                 <Link to="/dashboard" className="text-sm text-muted-foreground hover:text-foreground">
                   Seller Dashboard
@@ -48,21 +42,6 @@ export default function Footer() {
             </ul>
           </div>
           <div>
-            <h3 className="text-lg font-semibold mb-4">Connect</h3>
-            <div className="flex space-x-4">
-              <a href="#" className="text-muted-foreground hover:text-foreground">
-                <Instagram className="h-5 w-5" />
-              </a>
-              <a href="#" className="text-muted-foreground hover:text-foreground">
-                <Twitter className="h-5 w-5" />
-              </a>
-              <a href="#" className="text-muted-foreground hover:text-foreground">
-                <Facebook className="h-5 w-5" />
-              </a>
-              <a href="#" className="text-muted-foreground hover:text-foreground">
-                <Youtube className="h-5 w-5" />
-              </a>
-            </div>
           </div>
         </div>
         <div className="mt-8 pt-8 border-t">
