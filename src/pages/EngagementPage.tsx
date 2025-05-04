@@ -21,7 +21,6 @@ import toast from "react-hot-toast";
 import "@/styles/emojiBackground.css"; // Assuming correct path
 import { useAuth } from '@/contexts/AuthContext';
 import { apiClient } from '@/contexts/AuthContext'; // Import apiClient
-import { formatCurrency } from '@/lib/utils';
 
 // --- Types & Constants ---
 type PlatformId = "tiktok" | "instagram" | "facebook" | "youtube" | "telegram" | "whatsapp" | "x";
